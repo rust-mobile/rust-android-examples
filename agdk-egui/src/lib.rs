@@ -35,7 +35,7 @@ fn create_window<T>(
             width: INITIAL_WIDTH,
             height: INITIAL_HEIGHT,
         })
-        .build(&event_loop)
+        .build(event_loop)
         .unwrap();
 
     unsafe { painter.set_window(Some(&window)) };
@@ -71,15 +71,19 @@ fn _main(event_loop: EventLoop<Event>) {
 
     let mut state = State::new(&event_loop);
     let mut painter = Painter::new(
-        wgpu::Backends::all(),
-        wgpu::PowerPreference::LowPower,
-        wgpu::DeviceDescriptor {
-            label: None,
-            features: wgpu::Features::default(),
-            limits: wgpu::Limits::default(),
+        egui_wgpu::WgpuConfiguration {
+            backends: wgpu::Backends::all(),
+            power_preference: wgpu::PowerPreference::LowPower,
+            device_descriptor: wgpu::DeviceDescriptor {
+                label: None,
+                features: wgpu::Features::default(),
+                limits: wgpu::Limits::default(),
+            },
+            present_mode: wgpu::PresentMode::Fifo,
+            ..Default::default()
         },
-        wgpu::PresentMode::Fifo,
-        1,
+        1, // msaa samples
+        8, // depth bits
     );
     let mut window: Option<winit::window::Window> = None;
     let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
@@ -124,15 +128,20 @@ fn _main(event_loop: EventLoop<Event>) {
             }
         }
         WindowEvent { event, .. } => {
-            if state.on_event(&ctx, &event) == false {
-                match event {
-                    winit::event::WindowEvent::Resized(size) => {
-                        painter.on_window_resized(size.width, size.height);
-                    }
-                    winit::event::WindowEvent::CloseRequested => {
-                        *control_flow = ControlFlow::Exit;
-                    }
-                    _ => {}
+            match event {
+                winit::event::WindowEvent::Resized(size) => {
+                    painter.on_window_resized(size.width, size.height);
+                }
+                winit::event::WindowEvent::CloseRequested => {
+                    *control_flow = ControlFlow::Exit;
+                }
+                _ => {}
+            }
+
+            let response = state.on_event(&ctx, &event);
+            if response.repaint {
+                if let Some(window) = window.as_ref() {
+                    window.request_redraw();
                 }
             }
         }

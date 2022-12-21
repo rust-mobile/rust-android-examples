@@ -9,12 +9,12 @@ resolver = "2"
 [dependencies]
 log = "0.4"
 winit = { version = "0.27", features = [ "android-game-activity" ] }
-wgpu = "0.13.0"
+wgpu = "0.14.0"
 pollster = "0.2"
-egui = "0.19"
-egui-wgpu = { version = "0.19", features = [ "winit" ] }
-egui-winit = { version = "0.19", default-features = false }
-egui_demo_lib = "0.19"
+egui = "0.20"
+egui-wgpu = { version = "0.20", features = [ "winit" ] }
+egui-winit = { version = "0.20", default-features = false }
+egui_demo_lib = "0.20"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.9"
@@ -29,22 +29,6 @@ android_logger = "0.11.0"
 # based on android-activity
 winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
 #winit = { path = "../../../winit" }
-
-# Note:
-# Since android-activity is responsible for invoking the `android_main`
-# entrypoint for a native Rust application there can only be a single
-# implementation of the crate linked with the application.
-#
-# To avoid conflicts it's generally recommend to rely on Winit to pull
-# in a compatible version of android-activity but if you'd like to build
-# this example against the local checkout of android-activity you should
-# specify a patch here to make sure you also affect the version that Winit
-# uses.
-#
-# Note: also check that the local android-activity/Cargo.toml version matches
-# the version of android-activity that Winit depends on (in case you need to check
-# out a release branch locally to be compatible)
-#android-activity = { path = "../../android-activity" }
 
 [features]
 default = []
