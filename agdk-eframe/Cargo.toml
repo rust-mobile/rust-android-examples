@@ -8,26 +8,18 @@ resolver = "2"
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.27.2", features = [ "android-game-activity" ] }
-wgpu = "0.14.0"
+winit = { version = "0.28", features = [ "android-game-activity" ] }
+wgpu = "0.16.0"
 pollster = "0.2"
-egui = "0.20"
-eframe = { version = "0.20", features = [ "wgpu" ] }
-egui_demo_lib = "0.20"
+egui = "0.22"
+eframe = { version = "0.22", features = [ "wgpu", "android-game-activity" ] }
+egui_demo_lib = "0.22"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.9"
+env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.11.0"
-
-[patch.crates-io]
-
-# Since Egui currently depends on Winit 0.27 we can't update the examples to use
-# Winit master just yet, and use this branch of Winit with an updated backend
-# based on android-activity
-winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
-#winit = { path = "../../../winit" }
+android_logger = "0.13.1"
 
 [features]
 default = []

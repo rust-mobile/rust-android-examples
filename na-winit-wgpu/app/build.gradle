@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    ndkVersion "25.2.9519653"
     compileSdk 31
 
     defaultConfig {
@@ -32,9 +33,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    namespace 'co.realfit.nawinitwgpu'
 }
 
 dependencies {
-    
+
 }
 

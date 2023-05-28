@@ -2,14 +2,12 @@ name: ci
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 env:
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: "-C debuginfo=0 --deny warnings"
   RUSTDOCFLAGS: -Dwarnings
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,8 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         rust_version: [stable]
+        cargo_ndk_args: [-t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o app/src/main/jniLibs/]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: hecrj/setup-rust-action@v1
         with:
@@ -49,50 +48,102 @@ jobs:
         # a shared target to speed up builds of all examples
         run: mkdir shared-target
 
-      - name: Build agdk-mainloop example
-        working-directory: agdk-mainloop
-        run: >
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk
-          -t arm64-v8a
-          -t armeabi-v7a
-          -t x86_64
-          -t x86
-          -o app/src/main/jniLibs/ -- build
-
       - name: Build na-mainloop example
         working-directory: na-mainloop
         run: >
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk
-          -t arm64-v8a
-          -t armeabi-v7a
-          -t x86_64
-          -t x86
-          -o app/src/main/jniLibs/ -- build
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build agdk-mainloop example
+        working-directory: agdk-mainloop
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build na-subclass-jni
+        working-directory: na-subclass-jni
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build na-winit-wgpu
+        working-directory: na-winit-wgpu
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build na-winit-glutin
+        working-directory: na-winit-glutin
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build agdk-winit-glutin
+        working-directory: na-winit-glutin
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build agdk-cpal
+        working-directory: agdk-cpal
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build agdk-oboe
+        working-directory: agdk-oboe
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build na-egui example
+        working-directory: na-egui
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
       - name: Build agdk-egui example
         working-directory: agdk-egui
         run: >
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk
-          -t arm64-v8a
-          -t armeabi-v7a
-          -t x86_64
-          -t x86
-          -o app/src/main/jniLibs/ -- build
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk
-          -t arm64-v8a
-          -t armeabi-v7a
-          -t x86_64
-          -t x86
-          -o app/src/main/jniLibs/ -- build
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build na-openxr-info example
+        working-directory: na-openxr-info
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build --features=android &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
+      - name: Build na-openxr-wgpu
+        working-directory: na-openxr-wgpu
+        run: >
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          ./gradlew build &&
+          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+
 
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: actions-rs/toolchain@v1
         with:

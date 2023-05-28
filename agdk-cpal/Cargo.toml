@@ -9,7 +9,7 @@ edition = "2021"
 log = "0.4"
 android_logger = "0.11.0"
 android-activity = { version = "0.4", features = ["game-activity"] }
-cpal = "0.14"
+cpal = "0.15"
 atomic_float = "0.1"
 anyhow = "1"
 

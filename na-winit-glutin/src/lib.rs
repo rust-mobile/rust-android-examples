@@ -9,6 +9,7 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
+use winit::platform::run_return::EventLoopExtRunReturn;
 #[cfg(glx_backend)]
 use winit::platform::unix;
 
@@ -367,13 +368,16 @@ impl App {
     }
 }
 
-fn run(event_loop: EventLoop<()>) {
+fn run(mut event_loop: EventLoop<()>) {
     log::trace!("Running mainloop...");
 
     let raw_display = event_loop.raw_display_handle();
     let mut app = App::new(raw_display);
 
-    event_loop.run(move |event, event_loop, control_flow| {
+    // It's not recommended to use `run` on Android because it will call
+    // `std::process::exit` when finished which will short-circuit any
+    // Java lifecycle handling
+    event_loop.run_return(move |event, event_loop, control_flow| {
         log::trace!("Received Winit event: {event:?}");
 
         *control_flow = ControlFlow::Wait;

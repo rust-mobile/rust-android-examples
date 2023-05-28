@@ -1,32 +1,24 @@
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
-use log::Level;
-use log::{info, trace};
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct AppState {
-    uri: String,
-}
+use log::info;
 
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(android_logger::Config::default().with_min_level(Level::Info));
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
 
     let mut quit = false;
     let mut redraw_pending = true;
-    let mut render_state: Option<()> = Default::default();
+    let mut native_window: Option<ndk::native_window::NativeWindow> = None;
 
     while !quit {
         app.poll_events(
-            Some(Duration::from_millis(500)), /* timeout */
+            Some(std::time::Duration::from_secs(1)), /* timeout */
             |event| {
                 match event {
                     PollEvent::Wake => {
-                        trace!("Early wake up");
+                        info!("Early wake up");
                     }
                     PollEvent::Timeout => {
-                        trace!("Timed out");
+                        info!("Timed out");
                         // Real app would probably rely on vblank sync via graphics API...
                         redraw_pending = true;
                     }
@@ -34,31 +26,34 @@ fn android_main(app: AndroidApp) {
                         info!("Main event: {:?}", main_event);
                         match main_event {
                             MainEvent::SaveState { saver, .. } => {
-                                let state = serde_json::to_vec(&AppState {
-                                    uri: format!("foo://bar"),
-                                })
-                                .unwrap();
-                                saver.store(&state);
+                                saver.store("foo://bar".as_bytes());
                             }
                             MainEvent::Pause => {}
                             MainEvent::Resume { loader, .. } => {
                                 if let Some(state) = loader.load() {
-                                    let state: AppState = serde_json::from_slice(&state).unwrap();
-                                    info!("Resumed with saved state = {state:#?}");
+                                    if let Ok(uri) = String::from_utf8(state) {
+                                        info!("Resumed with saved state = {uri:#?}");
+                                    }
                                 }
                             }
                             MainEvent::InitWindow { .. } => {
-                                render_state = Some(());
+                                native_window = app.native_window();
                                 redraw_pending = true;
                             }
                             MainEvent::TerminateWindow { .. } => {
-                                render_state = None;
+                                native_window = None;
                             }
                             MainEvent::WindowResized { .. } => {
                                 redraw_pending = true;
                             }
                             MainEvent::RedrawNeeded { .. } => {
                                 redraw_pending = true;
+                            }
+                            MainEvent::InputAvailable { .. } => {
+                                redraw_pending = true;
+                            }
+                            MainEvent::ConfigChanged { .. } => {
+                                info!("Config Changed: {:#?}", app.config());
                             }
                             MainEvent::LowMemory => {}
 
@@ -70,8 +65,7 @@ fn android_main(app: AndroidApp) {
                 }
 
                 if redraw_pending {
-                    info!("Checking input: START");
-                    if let Some(_rs) = render_state {
+                    if let Some(native_window) = &native_window {
                         redraw_pending = false;
 
                         // Handle input
@@ -80,23 +74,43 @@ fn android_main(app: AndroidApp) {
                             InputStatus::Unhandled
                         });
 
-                        // Render...
+                        info!("Render...");
+                        dummy_render(native_window);
                     }
-                    info!("Checking input: DONE");
-                } else {
-                    info!("No redraw pending");
                 }
             },
         );
     }
 }
 
+/// Post a NOP frame to the window
+///
+/// Since this is a bare minimum test app we don't depend
+/// on any GPU graphics APIs but we do need to at least
+/// convince Android that we're drawing something and are
+/// responsive, otherwise it will stop delivering input
+/// events to us.
+fn dummy_render(native_window: &ndk::native_window::NativeWindow) {
+    unsafe {
+        let mut buf: ndk_sys::ANativeWindow_Buffer = std::mem::zeroed();
+        let mut rect: ndk_sys::ARect = std::mem::zeroed();
+        ndk_sys::ANativeWindow_lock(
+            native_window.ptr().as_ptr() as _,
+            &mut buf as _,
+            &mut rect as _,
+        );
+        // Note: we don't try and touch the buffer since that
+        // also requires us to handle various buffer formats
+        ndk_sys::ANativeWindow_unlockAndPost(native_window.ptr().as_ptr() as _);
+    }
+}
+
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "C" fn Java_co_realfit_nasubclassjni_MainActivity_notifyOnNewIntent(
-    _env: jni::JNIEnv,
-    _class: jni::objects::JObject, // This is the JClass, not the instance,
-    _activity: jni::objects::JObject,
+pub extern "C" fn Java_co_realfit_nasubclassjni_MainActivity_notifyOnNewIntent<'local>(
+    _env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    _activity: jni::objects::JObject<'local>,
 ) {
     info!("onNewIntent was called!");
 }

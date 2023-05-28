@@ -94,7 +94,11 @@ fn dummy_render(native_window: &ndk::native_window::NativeWindow) {
     unsafe {
         let mut buf: ndk_sys::ANativeWindow_Buffer = std::mem::zeroed();
         let mut rect: ndk_sys::ARect = std::mem::zeroed();
-        ndk_sys::ANativeWindow_lock(native_window.ptr().as_ptr() as _, &mut buf as _, &mut rect as _);
+        ndk_sys::ANativeWindow_lock(
+            native_window.ptr().as_ptr() as _,
+            &mut buf as _,
+            &mut rect as _,
+        );
         // Note: we don't try and touch the buffer since that
         // also requires us to handle various buffer formats
         ndk_sys::ANativeWindow_unlockAndPost(native_window.ptr().as_ptr() as _);

@@ -132,6 +132,7 @@ impl XrShell {
         let wgpu_required_instance_extensions =
             <hal::api::Vulkan as hal::Api>::Instance::required_extensions(
                 &entry,
+                vk::API_VERSION_1_1,
                 hal_instance_flags,
             )?;
         log::info!(
@@ -157,7 +158,7 @@ impl XrShell {
         let required_extensions = wgpu_required_instance_extensions
             .iter()
             .chain(xr_required_instance_extensions.iter())
-            .map(|s| *s)
+            .copied()
             .collect::<Vec<_>>();
         let required_extensions_ptrs = wgpu_required_instance_extensions
             .iter()
@@ -281,7 +282,6 @@ impl XrShell {
         vk_instance: &ash::Instance,
         vk_target_version: u32,
         features: wgt::Features,
-        limits: &wgt::Limits,
     ) -> (
         vk::PhysicalDevice,
         hal::ExposedAdapter<hal::api::Vulkan>,
@@ -305,9 +305,6 @@ impl XrShell {
             panic!("Vulkan physical device doesn't support version 1.1");
         }
 
-        let phd_limits = &vk_device_properties.limits;
-        let uab_types = hal::UpdateAfterBindTypes::from_limits(limits, phd_limits);
-
         let xr_required_device_extensions: &'static mut Vec<CString> = Box::leak(Box::new(
             xr_instance
                 .vulkan_legacy_device_extensions(system)
@@ -326,14 +323,12 @@ impl XrShell {
         let required_device_extensions = xr_required_device_extensions
             .iter()
             .chain(wgpu_required_device_extensions.iter())
-            .map(|s| *s)
+            .copied()
             .collect::<Vec<_>>();
 
-        let mut enabled_phd_features = hal_adapter.adapter.physical_device_features(
-            &required_device_extensions,
-            features,
-            uab_types,
-        );
+        let mut enabled_phd_features = hal_adapter
+            .adapter
+            .physical_device_features(&required_device_extensions, features);
 
         let family_index = vk_instance
             .get_physical_device_queue_family_properties(vk_physical_device)
@@ -366,7 +361,7 @@ impl XrShell {
             .enabled_extension_names(&str_pointers);
         let mut info = enabled_phd_features.add_to_device_create_builder(pre_info);
 
-        // WORKAROUND: wgpu_hal 0.13 omits pushing PhysicalDeviceMultiviewFeatures even `with wgt::Features::MULTIVIEW`
+        // WORKAROUND: wgpu_hal 0.16 omits pushing PhysicalDeviceMultiviewFeatures even `with wgt::Features::MULTIVIEW`
         let mut multiview = vk::PhysicalDeviceMultiviewFeatures {
             multiview: vk::TRUE,
             ..Default::default()
@@ -389,7 +384,6 @@ impl XrShell {
                 true,
                 &wgpu_required_device_extensions,
                 features,
-                uab_types,
                 family_info.queue_family_index,
                 0,
             )
@@ -417,7 +411,7 @@ impl XrShell {
         // Because we are using multiview in this example, we require that all view
         // dimensions are identical.
         let views = xr_instance.enumerate_view_configuration_views(system, XrShell::VIEW_TYPE)?;
-        assert_eq!(views.len(), 2 as usize);
+        assert_eq!(views.len(), 2_usize);
         assert_eq!(views[0], views[1]);
 
         // Create a swapchain for the viewpoints! A swapchain is a set of texture buffers
@@ -457,6 +451,7 @@ impl XrShell {
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             usage: hal::TextureUses::COLOR_TARGET | hal::TextureUses::RESOURCE,
             memory_flags: hal::MemoryFlags::empty(),
+            view_formats: vec![wgpu::TextureFormat::Rgba8UnormSrgb],
         };
 
         let texture_desc = wgpu::TextureDescriptor {
@@ -471,6 +466,7 @@ impl XrShell {
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[wgpu::TextureFormat::Rgba8UnormSrgb],
         };
 
         // We'll want to track our own information about the swapchain, so we can draw stuff
@@ -579,14 +575,13 @@ impl XrShell {
         // take the first one available!
         let xr_blend_modes =
             xr_instance.enumerate_environment_blend_modes(xr_system, XrShell::VIEW_TYPE)?;
-        if xr_blend_modes.len() == 0 {
+        if xr_blend_modes.is_empty() {
             // Not obvious from spec if an empty set would be an error
             return Err(anyhow!("Failed to query XR environment blend modes"));
         }
         let xr_blend_mode = xr_blend_modes[0];
 
-        let xr_blend_modes: HashSet<_> =
-            xr_blend_modes.into_iter().map(|m| XrBlendMode(m)).collect();
+        let xr_blend_modes: HashSet<_> = xr_blend_modes.into_iter().map(XrBlendMode).collect();
 
         // OpenXR wants to ensure apps are using the correct graphics card and Vulkan features and
         // extensions, so the instance and device MUST be set up before Instance::create_session.
@@ -627,7 +622,6 @@ impl XrShell {
                     &vk_instance,
                     vk_target_version,
                     features,
-                    &limits,
                 );
 
             let wgpu_instance = wgpu::Instance::from_hal::<hal::api::Vulkan>(hal_instance);
@@ -947,7 +941,7 @@ impl App {
 
         // Spec: "Every application must call xrBeginFrame before calling xrEndFrame, and should call
         //  xrEndFrame before calling xrBeginFrame again."
-        if !rendered || !render_status.is_ok() {
+        if !rendered || render_status.is_err() {
             self.xr_shell.xr_frame_stream.end(
                 frame_state.predicted_display_time,
                 self.xr_shell.xr_current_blend_mode,
