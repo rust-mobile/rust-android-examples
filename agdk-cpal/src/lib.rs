@@ -2,7 +2,10 @@
 
 use std::sync::OnceLock;
 
-use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
+use android_activity::{
+    ndk::{hardware_buffer_format::HardwareBufferFormat, native_window::NativeWindow},
+    AndroidApp, InputStatus, MainEvent, PollEvent,
+};
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     FromSample, Sample, SizedSample,
@@ -74,7 +77,7 @@ fn android_main(app: AndroidApp) {
 
     let mut quit = false;
     let mut redraw_pending = true;
-    let mut native_window: Option<ndk::native_window::NativeWindow> = None;
+    let mut native_window = None;
 
     let host = cpal::default_host();
 
@@ -139,6 +142,16 @@ fn android_main(app: AndroidApp) {
                             }
                             MainEvent::InitWindow { .. } => {
                                 native_window = app.native_window();
+                                if let Some(nw) = &native_window {
+                                    // Set the backing buffer to a known format (without changing
+                                    // the size) so that we can safely draw to it in dummy_render().
+                                    nw.set_buffers_geometry(
+                                        0,
+                                        0,
+                                        Some(HardwareBufferFormat::R8G8B8A8_UNORM),
+                                    )
+                                    .unwrap()
+                                }
                                 redraw_pending = true;
                             }
                             MainEvent::TerminateWindow { .. } => {
@@ -192,17 +205,24 @@ fn android_main(app: AndroidApp) {
 /// convince Android that we're drawing something and are
 /// responsive, otherwise it will stop delivering input
 /// events to us.
-fn dummy_render(native_window: &ndk::native_window::NativeWindow) {
-    unsafe {
-        let mut buf: ndk_sys::ANativeWindow_Buffer = std::mem::zeroed();
-        let mut rect: ndk_sys::ARect = std::mem::zeroed();
-        ndk_sys::ANativeWindow_lock(
-            native_window.ptr().as_ptr() as _,
-            &mut buf as _,
-            &mut rect as _,
-        );
-        // Note: we don't try and touch the buffer since that
-        // also requires us to handle various buffer formats
-        ndk_sys::ANativeWindow_unlockAndPost(native_window.ptr().as_ptr() as _);
+fn dummy_render(native_window: &NativeWindow) {
+    let mut lock = native_window.lock(None).unwrap();
+    let (w, h) = (lock.width(), lock.height());
+
+    assert_eq!(
+        lock.format(),
+        HardwareBufferFormat::R8G8B8A8_UNORM,
+        "Expected the buffer format to be R8G8B8A8_UNORM since we set that in `InitWindow` handling"
+    );
+
+    for (y, line) in lock.lines().unwrap().enumerate() {
+        let r = y * 255 / h;
+        for (x, pixels) in line.chunks_mut(4).enumerate() {
+            let g = x * 255 / w;
+            pixels[0].write(r as u8);
+            pixels[1].write(g as u8);
+            pixels[2].write(0);
+            pixels[3].write(255);
+        }
     }
 }
