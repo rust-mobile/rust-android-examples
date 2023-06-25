@@ -125,19 +125,27 @@ jobs:
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
-      - name: Build na-openxr-info example
-        working-directory: na-openxr-info
-        run: >
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build --features=android &&
-          ./gradlew build &&
-          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+      # We don't currently build the OpenXR examples on Android because I
+      # haven't found a nice nice way to pull in libopenxr_loader binaries that
+      # we can link against. Normally I would use the binaries as part of the
+      # Oculus SDK
+      #
+      # TODO: maybe we can look at using the 'prefab' `.aar`s from Khronos here:
+      # https://search.maven.org/artifact/org.khronos.openxr/openxr_loader_for_android
+      #
+      #- name: Build na-openxr-info example
+      #  working-directory: na-openxr-info
+      #  run: >
+      #    CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build --features=android &&
+      #    ./gradlew build &&
+      #    find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
-      - name: Build na-openxr-wgpu
-        working-directory: na-openxr-wgpu
-        run: >
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
-          ./gradlew build &&
-          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+      #- name: Build na-openxr-wgpu
+      #  working-directory: na-openxr-wgpu
+      #  run: >
+      #    CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+      #    ./gradlew build &&
+      #    find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
 
   format:
