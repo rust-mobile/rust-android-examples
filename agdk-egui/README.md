@@ -1,9 +1,6 @@
 This tests using `GameActivity` with egui, winit and wgpu.
 
-This is based on a re-worked winit backend here:
-https://github.com/rib/winit/tree/android-activity
-
-```
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 

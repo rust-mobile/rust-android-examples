@@ -15,13 +15,13 @@ impl eframe::App for DemoApp {
     }
 }
 
-fn _main(mut options: NativeOptions) {
+fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     options.renderer = Renderer::Wgpu;
     eframe::run_native(
         "My egui App",
         options,
-        Box::new(|_cc| Box::new(DemoApp::default())),
-    );
+        Box::new(|_cc| Box::<DemoApp>::default()),
+    )
 }
 
 #[cfg(target_os = "android")]
@@ -29,13 +29,20 @@ fn _main(mut options: NativeOptions) {
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
+    android_logger::init_once(
+        android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
+    );
 
-    let mut options = NativeOptions::default();
-    options.event_loop_builder = Some(Box::new(move |builder| {
-        builder.with_android_app(app);
-    }));
-    _main(options);
+    let options = NativeOptions {
+        event_loop_builder: Some(Box::new(move |builder| {
+            builder.with_android_app(app);
+        })),
+        ..Default::default()
+    };
+
+    _main(options).unwrap_or_else(|err| {
+        log::error!("Failure while running EFrame application: {err:?}");
+    });
 }
 
 #[cfg(not(target_os = "android"))]

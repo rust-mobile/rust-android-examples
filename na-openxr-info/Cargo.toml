@@ -7,18 +7,14 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-openxr = { version = "0.16" }
+openxr = { version = "0.17" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.9"
+env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
 android-activity = { version = "0.4", features = ["native-activity"] }
-
-[patch.crates-io]
-# openxr 0.16 uses ndk-glue, but master uses ndk-context which is compatible with android-activity
-openxr = { git = "https://github.com/Ralith/openxrs" }
 
 [features]
 default = [ "linked" ]

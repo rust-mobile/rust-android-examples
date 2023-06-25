@@ -25,7 +25,7 @@ fn _main() {
     let instance = entry
         .create_instance(
             &xr::ApplicationInfo {
-                application_name: "hello openxrs",
+                application_name: "openxr-info",
                 ..Default::default()
             },
             &xr::ExtensionSet::default(),
@@ -38,24 +38,25 @@ fn _main() {
         instance_props.runtime_name, instance_props.runtime_version
     );
 
-    let system = instance
-        .system(xr::FormFactor::HEAD_MOUNTED_DISPLAY)
-        .unwrap();
-    let system_props = instance.system_properties(system).unwrap();
-    println!(
-        "selected system {}: {}",
-        system_props.system_id.into_raw(),
-        if system_props.system_name.is_empty() {
-            "<unnamed>"
-        } else {
-            &system_props.system_name
-        }
-    );
+    if let Ok(system) = instance.system(xr::FormFactor::HEAD_MOUNTED_DISPLAY) {
+        let system_props = instance.system_properties(system).unwrap();
+        println!(
+            "selected system {}: {}",
+            system_props.system_id.into_raw(),
+            if system_props.system_name.is_empty() {
+                "<unnamed>"
+            } else {
+                &system_props.system_name
+            }
+        );
 
-    let view_config_views = instance
-        .enumerate_view_configuration_views(system, xr::ViewConfigurationType::PRIMARY_STEREO)
-        .unwrap();
-    println!("view configuration views: {:#?}", view_config_views);
+        let view_config_views = instance
+            .enumerate_view_configuration_views(system, xr::ViewConfigurationType::PRIMARY_STEREO)
+            .unwrap();
+        println!("view configuration views: {:#?}", view_config_views);
+    } else {
+        println!("No HMD Found!");
+    }
 }
 
 #[allow(dead_code)]

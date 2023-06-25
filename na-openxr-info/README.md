@@ -15,16 +15,20 @@ and after unpacking the zip file you need to copy a suitable `libopenxr_loader.s
 library to `app/src/main/jniLibs/<abi>`
 
 For example if building for arm64-v8a:
-`cp path/to/ovr_openxr_mobile_sdk_42.0/OpenXR/Libs/Android/arm64-v8a/Debug/libopenxr_loader.so app/src/main/jniLibs/arm64-v8a`
 
+```bash
+mkdir app/src/main/jniLibs/arm64-v8a
+cp ovr_openxr_mobile_sdk_53.0/OpenXR/Libs/Android/arm64-v8a/Debug/libopenxr_loader.so app/src/main/jniLibs/arm64-v8a/libopenxr_loader.so
 ```
+
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 
 rustup target add aarch64-linux-android
 cargo install cargo-ndk
 
-cargo ndk -t arm64-v8a -o app/src/main/jniLibs/ build
+cargo ndk -t arm64-v8a -o app/src/main/jniLibs/ build --features=android
 ./gradlew build
 ./gradlew installDebug
 ```
@@ -32,7 +36,8 @@ cargo ndk -t arm64-v8a -o app/src/main/jniLibs/ build
 # Oculus Quest: Vulkan Validation Layer
 
 To enable the Vulkan validation layer on the Oculus Quest run:
-```
+
+```bash
 adb shell setprop debug.oculus.loadandinjectpackagedvvl.co.realfit.naopenxrwgpu 1
 ```
 

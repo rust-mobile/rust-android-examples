@@ -5,6 +5,7 @@ use log::trace;
 use wgpu::TextureFormat;
 use wgpu::{Adapter, Device, Instance, PipelineLayout, Queue, RenderPipeline, ShaderModule};
 
+use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
@@ -49,7 +50,14 @@ impl App {
     fn create_surface<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
         let window = winit::window::Window::new(event_loop).unwrap();
         log::info!("WGPU: creating surface for native window");
-        let surface = unsafe { self.instance.create_surface(&window) };
+
+        // # Panics
+        // Currently create_surface is documented to only possibly fail with with WebGL2
+        let surface = unsafe {
+            self.instance
+                .create_surface(&window)
+                .expect("Failed to create surface")
+        };
         self.surface_state = Some(SurfaceState { window, surface });
     }
 
@@ -143,8 +151,8 @@ impl App {
 
             if self.render_state.is_none() {
                 log::info!("WGPU: finding supported swapchain format");
-                let swapchain_format = surface_state.surface.get_supported_formats(adapter)[0];
-
+                let surface_caps = surface_state.surface.get_capabilities(adapter);
+                let swapchain_format = surface_caps.formats[0];
                 let rs = Self::init_render_state(adapter, swapchain_format).await;
                 self.render_state = Some(rs);
             }
@@ -165,6 +173,7 @@ impl App {
                 present_mode: wgpu::PresentMode::Mailbox,
                 //present_mode: wgpu::PresentMode::Fifo,
                 alpha_mode: wgpu::CompositeAlphaMode::Inherit,
+                view_formats: vec![swapchain_format],
             };
 
             log::info!("WGPU: Configuring surface swapchain: format = {swapchain_format:?}, size = {size:?}");
@@ -190,16 +199,23 @@ impl App {
     }
 }
 
-fn run(event_loop: EventLoop<()>) {
+fn run(mut event_loop: EventLoop<()>) {
     log::info!("Running mainloop...");
 
     // doesn't need to be re-considered later
-    let instance = wgpu::Instance::new(wgpu::Backends::all());
-    //let instance = wgpu::Instance::new(wgpu::Backends::VULKAN);
-    //let instance = wgpu::Instance::new(wgpu::Backends::GL);
+    let instance = Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::all(),
+        //backends: wgpu::Backends::VULKAN,
+        //backends: wgpu::Backends::GL,
+        ..Default::default()
+    });
 
     let mut app = App::new(instance);
-    event_loop.run(move |event, event_loop, control_flow| {
+
+    // It's not recommended to use `run` on Android because it will call
+    // `std::process::exit` when finished which will short-circuit any
+    // Java lifecycle handling
+    event_loop.run_return(move |event, event_loop, control_flow| {
         log::info!("Received Winit event: {event:?}");
 
         *control_flow = ControlFlow::Wait;
@@ -283,7 +299,9 @@ fn _main(event_loop: EventLoop<()>) {
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
+    android_logger::init_once(
+        android_logger::Config::default().with_max_level(log::LevelFilter::Info),
+    );
 
     let event_loop = EventLoopBuilder::new().with_android_app(app).build();
     _main(event_loop);

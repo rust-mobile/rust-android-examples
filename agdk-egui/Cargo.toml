@@ -8,27 +8,18 @@ resolver = "2"
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.27", features = [ "android-game-activity" ] }
-wgpu = "0.14.0"
 pollster = "0.2"
-egui = "0.20"
-egui-wgpu = { version = "0.20", features = [ "winit" ] }
-egui-winit = { version = "0.20", default-features = false }
-egui_demo_lib = "0.20"
+
+egui = { version = "0.22", features = [ "log" ] }
+egui-wgpu = { version = "0.22", features = [ "winit" ] }
+egui-winit = { version = "0.22", default-features = false, features = [ "android-game-activity" ] }
+egui_demo_lib = "0.22"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.9"
+env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.11.0"
-
-[patch.crates-io]
-
-# Since Egui currently depends on Winit 0.27 we can't update the examples to use
-# Winit master just yet, and use this branch of Winit with an updated backend
-# based on android-activity
-winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
-#winit = { path = "../../../winit" }
+android_logger = "0.13.0"
 
 [features]
 default = []
@@ -42,3 +33,8 @@ crate_type=["cdylib"]
 path="src/lib.rs"
 name="egui-test"
 required-features = [ "desktop" ]
+
+#[patch.crates-io]
+#egui = { version = "0.22", path = "../../egui/crates/egui" }
+#egui-wgpu = { version = "0.22", path = "../../egui/crates/egui-wgpu" }
+#egui-winit = { version = "0.22", path = "../../egui/crates/egui-winit" }

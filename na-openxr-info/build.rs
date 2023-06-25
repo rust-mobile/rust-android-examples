@@ -11,7 +11,7 @@ fn main() {
         };
 
         let libdir = std::path::Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap())
-            .join(format!("app/src/main/jniLibs/{android_abi}/lib"));
+            .join(format!("app/src/main/jniLibs/{android_abi}"));
         println!("cargo:rustc-link-search={}", libdir.to_string_lossy());
     }
 }
