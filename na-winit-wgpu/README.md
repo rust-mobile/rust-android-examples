@@ -1,6 +1,21 @@
 This is the same as agdk-winit-wgpu except it runs with `NativeActivity`
 instead of `GameActivity`
 
+# xbuild
+
+```bash
+cargo install xbuild
+
+# Get ID of connected debug device, of the form adb:DEVICEID
+x devices
+
+# Build and run for that configuration
+x run --device adb:DEVICEID
+
+# Or build for a generic arm64 Android device
+x build --platform android --arch arm64
+```
+
 # Gradle Build
 
 ```bash
