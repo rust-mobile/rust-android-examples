@@ -245,7 +245,7 @@ impl App {
             .build(Some(raw_window_handle));
         unsafe {
             glutin_display
-                .create_context(&config, &context_attributes)
+                .create_context(config, &context_attributes)
                 .unwrap_or_else(|_| {
                     glutin_display
                         .create_context(config, &fallback_context_attributes)
@@ -268,7 +268,7 @@ impl App {
     }
 
     fn ensure_surface_and_context<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
-        let window = winit::window::Window::new(&event_loop).unwrap();
+        let window = winit::window::Window::new(event_loop).unwrap();
         let raw_window_handle = window.raw_window_handle();
 
         // Lazily initialize, egl, wgl, glx etc

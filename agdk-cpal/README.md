@@ -2,7 +2,7 @@ This is a minimal test application based on `GameActivity` that just
 runs a mainloop based on android_activity::poll_events() and plays a
 sine wave audio test using the Cpal audio library.
 
-```
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 

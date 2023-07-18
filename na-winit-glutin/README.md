@@ -4,6 +4,21 @@ Glutin crate.
 This example demonstrates how to re-create the application's surface state as
 necessary when the application is paused and resumed on Android.
 
+# xbuild
+
+```bash
+cargo install xbuild
+
+# Get ID of connected debug device, of the form adb:DEVICEID
+x devices
+
+# Build and run for that configuration
+x run --device adb:DEVICEID
+
+# Or build for a generic arm64 Android device
+x build --platform android --arch arm64
+```
+
 # Gradle Build
 
 ```bash

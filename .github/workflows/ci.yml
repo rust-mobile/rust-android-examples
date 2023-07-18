@@ -23,6 +23,16 @@ jobs:
         with:
           rust-version: ${{ matrix.rust_version }}
 
+      - name: Install LLVM
+        run: sudo apt-get update && sudo apt-get install llvm
+
+      - name: Build na-mainloop with xbuild
+        working-directory: na-mainloop
+        run: |
+          cargo install xbuild
+          # Showcase that x builds out-of-the-box with no external dependencies
+          x build --platform android --arch arm64
+
       - name: Install Rust targets
         run: >
           rustup target add
