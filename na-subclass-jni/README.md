@@ -6,7 +6,8 @@ Note: unlike the `na-mainloop` example, this one can't be built via
 `cargo apk` since it needs to compile some Java code.
 
 # Gradle Build
-```
+
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 

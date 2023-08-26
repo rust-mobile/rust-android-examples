@@ -1,20 +1,24 @@
-use std::ffi::{CStr, CString};
-use std::num::NonZeroU32;
+use std::{
+    ffi::{CStr, CString},
+    num::NonZeroU32,
+};
 
+use glutin::{
+    config::{Config, ConfigSurfaceTypes, ConfigTemplate, ConfigTemplateBuilder},
+    context::{ContextApi, ContextAttributesBuilder, NotCurrentContext},
+    display::{Display, DisplayApiPreference},
+    prelude::*,
+    surface::{SurfaceAttributesBuilder, WindowSurface},
+};
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
-
-use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 #[cfg(glx_backend)]
 use winit::platform::x11;
-
-use glutin::config::{Config, ConfigSurfaceTypes, ConfigTemplate, ConfigTemplateBuilder};
-use glutin::context::{ContextApi, ContextAttributesBuilder, NotCurrentContext};
-use glutin::display::{Display, DisplayApiPreference};
-use glutin::prelude::*;
-use glutin::surface::{SurfaceAttributesBuilder, WindowSurface};
+use winit::{
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+};
 
 #[rustfmt::skip]
 static VERTEX_DATA: [f32; 15] = [
@@ -107,8 +111,8 @@ impl Renderer {
                 gl::STATIC_DRAW,
             );
 
-            let pos_attrib = gl.GetAttribLocation(program, b"position\0".as_ptr() as *const _);
-            let color_attrib = gl.GetAttribLocation(program, b"color\0".as_ptr() as *const _);
+            let pos_attrib = gl.GetAttribLocation(program, c"position".as_ptr() as *const _);
+            let color_attrib = gl.GetAttribLocation(program, c"color".as_ptr() as *const _);
             gl.VertexAttribPointer(
                 pos_attrib as gl::types::GLuint,
                 2,
@@ -247,7 +251,7 @@ impl App {
             .build(Some(raw_window_handle));
         unsafe {
             glutin_display
-                .create_context(&config, &context_attributes)
+                .create_context(config, &context_attributes)
                 .unwrap_or_else(|_| {
                     glutin_display
                         .create_context(config, &fallback_context_attributes)

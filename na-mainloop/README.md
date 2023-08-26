@@ -7,7 +7,7 @@ Since this test doesn't require a custom `Activity` subclass it's
 optionally possible to build this example with `cargo apk`.
 
 # Gradle Build
-```
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 
@@ -26,7 +26,8 @@ adb shell am start -n com.github.realfit_mobile.namainloop/android.app.NativeAct
 ```
 
 # Cargo APK Build
-```
+
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_SDK_HOME="path/to/sdk"
 

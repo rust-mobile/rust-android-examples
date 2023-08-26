@@ -1,10 +1,10 @@
-use atomic_float::AtomicF32;
 use std::{
     f32::consts::PI,
     marker::PhantomData,
     sync::{atomic::Ordering, Arc},
 };
 
+use atomic_float::AtomicF32;
 use oboe::{
     AudioDeviceDirection, AudioDeviceInfo, AudioFeature, AudioOutputCallback, AudioOutputStream,
     AudioOutputStreamSafe, AudioStream, AudioStreamAsync, AudioStreamBase, AudioStreamBuilder,

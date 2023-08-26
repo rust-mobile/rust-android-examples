@@ -227,6 +227,7 @@ fn android_main(app: AndroidApp) {
                                         }
                                         InputEvent::MotionEvent(motion_event) => {
                                             println!("action = {:?}", motion_event.action());
+                                            #[expect(clippy::single_match)]
                                             match motion_event.action() {
                                                 MotionAction::Up => {
                                                     let pointer = motion_event.pointer_index();
@@ -367,7 +368,7 @@ fn character_map_and_combine_key(
                     Some(unicode)
                 };
                 *combining_accent = None;
-                combined_unicode.map(|unicode| KeyMapChar::Unicode(unicode))
+                combined_unicode.map(KeyMapChar::Unicode)
             } else {
                 Some(KeyMapChar::Unicode(unicode))
             }

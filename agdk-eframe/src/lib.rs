@@ -1,7 +1,5 @@
-use eframe::egui;
-use eframe::{NativeOptions, Renderer};
+use eframe::{egui, NativeOptions, Renderer};
 use tracing::{error, info};
-
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 

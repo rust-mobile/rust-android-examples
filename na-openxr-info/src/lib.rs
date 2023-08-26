@@ -1,8 +1,7 @@
-///! Based on https://github.com/Ralith/openxrs/blob/master/openxr/examples/hello.rs
-use openxr as xr;
-
+//! Based on <https://github.com/Ralith/openxrs/blob/master/openxr/examples/hello.rs>
 #[cfg(target_os = "android")]
 use android_activity::AndroidApp;
+use openxr as xr;
 
 fn _main() {
     println!("OpenXR Info");
