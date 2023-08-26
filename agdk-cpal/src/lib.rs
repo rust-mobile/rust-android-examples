@@ -1,13 +1,13 @@
-///! Based on https://github.com/RustAudio/cpal/blob/master/examples/android.rs
-use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
-use std::sync::OnceLock;
-use tracing::{error, info};
+//! Based on https://github.com/RustAudio/cpal/blob/master/examples/android.rs
 
+use std::sync::OnceLock;
+
+use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    SizedSample,
+    FromSample, Sample, SizedSample,
 };
-use cpal::{FromSample, Sample};
+use tracing::{error, info};
 
 fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> f32)
 where

@@ -1,20 +1,15 @@
 use std::{num::NonZeroU32, sync::Arc};
-use tracing::{debug, error};
 
 use egui::ViewportId;
-use egui_wgpu::RendererOptions;
-use egui_winit::winit;
-
-use winit::event_loop::{ActiveEventLoop, EventLoop};
-
+use egui_wgpu::{winit::Painter, RendererOptions};
+use egui_winit::{winit, State};
+use tracing::{debug, error};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
-
-use winit::event_loop::ControlFlow;
-
-use egui_wgpu::winit::Painter;
-use egui_winit::State;
-use winit::event::Event::*;
+use winit::{
+    event::Event::*,
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+};
 const INITIAL_WIDTH: u32 = 1920;
 const INITIAL_HEIGHT: u32 = 1080;
 
@@ -209,6 +204,7 @@ const DEFAULT_ENV_FILTER: &str = "debug,wgpu_hal=info,winit=info,naga=info";
 #[no_mangle]
 fn android_main(app: AndroidApp) {
     use std::sync::OnceLock;
+
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
     std::env::set_var("RUST_BACKTRACE", "full");

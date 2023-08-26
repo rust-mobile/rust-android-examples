@@ -1,21 +1,19 @@
-use std::borrow::Cow;
 #[cfg(target_os = "android")]
 use std::ffi::c_void;
 #[cfg(target_os = "android")]
 use std::ptr::NonNull;
-use std::sync::Arc;
-
-use tracing::{error, info, trace, warn};
+use std::{borrow::Cow, sync::Arc};
 
 use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
-use wgpu::{Adapter, Device, Instance, PipelineLayout, Queue, RenderPipeline, ShaderModule};
-use wgpu::{PipelineCompilationOptions, TextureFormat};
-
-use winit::error::EventLoopError;
-use winit::event_loop::{EventLoop, EventLoopProxy};
+use tracing::{error, info, trace, warn};
+use wgpu::{
+    Adapter, Device, Instance, PipelineCompilationOptions, PipelineLayout, Queue, RenderPipeline,
+    ShaderModule, TextureFormat,
+};
 use winit::{
+    error::EventLoopError,
     event::{Event, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy},
 };
 
 #[derive(Debug)]

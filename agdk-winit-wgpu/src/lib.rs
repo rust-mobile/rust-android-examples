@@ -8,11 +8,11 @@ mod app;
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
-    use app::App;
     use std::sync::OnceLock;
+
+    use app::App;
     use tracing::error;
-    use winit::event_loop::EventLoop;
-    use winit::platform::android::EventLoopBuilderExtAndroid;
+    use winit::{event_loop::EventLoop, platform::android::EventLoopBuilderExtAndroid};
 
     std::env::set_var("RUST_BACKTRACE", "full");
     std::env::set_var("WGPU_BACKEND", "vulkan");

@@ -3,7 +3,7 @@ runs a mainloop based on android_activity::poll_events() and traces
 the events received without doing any rendering. It also saves and
 restores some minimal application state.
 
-```
+```bash
 export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 

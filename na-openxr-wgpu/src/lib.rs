@@ -20,22 +20,17 @@ use std::{
     time::Duration,
 };
 
-use anyhow::anyhow;
-use anyhow::Result;
-use bitflags::bitflags;
-
+#[cfg(target_os = "android")]
+use android_activity::AndroidApp;
+use anyhow::{anyhow, Result};
 use ash::{
     util::read_spv,
     vk::{self, Handle},
 };
-
+use bitflags::bitflags;
+use openxr as xr;
 use wgpu_hal as hal;
 use wgpu_types as wgt;
-
-use openxr as xr;
-
-#[cfg(target_os = "android")]
-use android_activity::AndroidApp;
 struct Framebuffer {
     color: wgpu::TextureView,
 }
@@ -194,14 +189,14 @@ impl XrShell {
         let app_info = vk::ApplicationInfo::builder()
             .application_name(app_name.as_c_str())
             .application_version(app_version)
-            .engine_name(CStr::from_bytes_with_nul(b"wgpu-hal\0").unwrap())
+            .engine_name(c"wgpu-hal")
             .engine_version(2)
             .api_version(vk_target_version);
 
         log::debug!("Enumerating Vulkan instance layer properties");
         let instance_layers = entry.enumerate_instance_layer_properties()?;
 
-        let nv_optimus_layer = CStr::from_bytes_with_nul(b"VK_LAYER_NV_optimus\0").unwrap();
+        let nv_optimus_layer = c"VK_LAYER_NV_optimus";
         let has_nv_optimus = instance_layers
             .iter()
             .any(|inst_layer| unsafe { CStr::from_ptr(inst_layer.layer_name.as_ptr()) } == nv_optimus_layer);
@@ -210,7 +205,7 @@ impl XrShell {
         let layers = {
             let mut layers: Vec<&'static CStr> = Vec::new();
             if hal_instance_flags.contains(hal::InstanceFlags::VALIDATION) {
-                layers.push(CStr::from_bytes_with_nul(b"VK_LAYER_KHRONOS_validation\0").unwrap());
+                layers.push(c"VK_LAYER_KHRONOS_validation");
             }
 
             // Only keep available layers.

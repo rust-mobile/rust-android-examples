@@ -5,10 +5,8 @@ mod app;
 #[cfg(target_arch = "wasm32")]
 pub fn main() {
     use app::App;
-    use tracing_subscriber::layer::SubscriberExt;
-    use tracing_subscriber::util::SubscriberInitExt;
-    use winit::event_loop::EventLoop;
-    use winit::platform::web::EventLoopExtWebSys;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use winit::{event_loop::EventLoop, platform::web::EventLoopExtWebSys};
 
     console_error_panic_hook::set_once();
 
@@ -52,9 +50,8 @@ use winit::error::EventLoopError;
 #[allow(dead_code)]
 #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
 fn main() -> Result<(), EventLoopError> {
-    use winit::event_loop::EventLoop;
-
     use app::App;
+    use winit::event_loop::EventLoop;
 
     if std::option_env!("RUST_LOG").is_none() {
         std::env::set_var("RUST_LOG", app::DEFAULT_ENV_FILTER);
