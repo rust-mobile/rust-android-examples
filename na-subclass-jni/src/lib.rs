@@ -80,7 +80,7 @@ fn android_main(app: AndroidApp) {
                         redraw_pending = false;
 
                         // Handle input
-                        app.input_events(|event| {
+                        app.input_events_iter().unwrap().next(|event| {
                             info!("Input Event: {event:?}");
                             InputStatus::Unhandled
                         });
