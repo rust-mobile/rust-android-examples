@@ -3,12 +3,10 @@ name = "agdk-oboe"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 log = "0.4"
 android_logger = "0.13.1"
-android-activity = { version = "0.4", features = ["game-activity"] }
+android-activity = { version = "0.5", features = ["game-activity"] }
 oboe = { version = "0.5", features = ["java-interface"] }
 atomic_float = "0.1"
 

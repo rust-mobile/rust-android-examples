@@ -426,7 +426,9 @@ fn run(mut event_loop: EventLoop<()>) {
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
+    android_logger::init_once(
+        android_logger::Config::default().with_max_level(log::LevelFilter::Trace),
+    );
 
     let event_loop = EventLoopBuilder::new().with_android_app(app).build();
     run(event_loop);

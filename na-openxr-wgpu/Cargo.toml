@@ -3,8 +3,6 @@ name = "na-openxr-wgpu"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 log = "0.4"
 ash = "0.37"
@@ -20,8 +18,8 @@ env_logger = "0.10"
 ctrlc = "3"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.11.0"
-android-activity = { version = "0.4", features = [ "native-activity" ] }
+android_logger = "0.13"
+android-activity = { version = "0.5", features = [ "native-activity" ] }
 openxr = { version = "0.17", features = [ "linked" ] }
 
 [features]
