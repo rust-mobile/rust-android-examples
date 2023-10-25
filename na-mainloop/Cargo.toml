@@ -3,20 +3,15 @@ name = "na-mainloop"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-log = "0.4"
+android-activity = { version = "0.5.0", features = ["native-activity"] }
 android_logger = "0.11.0"
-android-activity = { version = "0.4", features = [ "native-activity" ] }
-#android-activity = { path = "../../android-activity/android-activity", features = [ "native-activity" ] }
-ndk-sys = "0.4"
-ndk = "0.7"
+log = "0.4"
+ndk = "0.8.0"
 
 [lib]
-#name="na_mainloop"
-crate_type=["cdylib"]
-
+# name = "na_mainloop"
+crate_type = ["cdylib"]
 
 ####################
 # cargo apk config #
@@ -27,7 +22,7 @@ crate_type=["cdylib"]
 package = "com.foo.bar"
 
 # Specifies the array of targets to build for.
-build_targets = [ "aarch64-linux-android" ]
+build_targets = ["aarch64-linux-android"]
 
 # Path to your application's resources folder.
 # If not specified, resources will not be included in the APK.

@@ -3,23 +3,20 @@ name = "na-subclass-jni"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-log = "0.4"
+android-activity = { version = "0.5.0", features = ["native-activity"] }
 android_logger = "0.11.0"
-android-activity = { version = "0.4", features = [ "native-activity" ] }
-ndk-context = "0.1"
-ndk = "0.7"
-ndk-sys = "0.4"
 jni = "0.21"
+log = "0.4"
+ndk = "0.8.0"
+ndk-context = "0.1"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [lib]
 #name="na_subclass_jni"
-crate_type=["cdylib"]
+crate_type = ["cdylib"]
 
 
 ####################
@@ -31,7 +28,7 @@ crate_type=["cdylib"]
 package = "com.foo.bar"
 
 # Specifies the array of targets to build for.
-build_targets = [ "aarch64-linux-android" ]
+build_targets = ["aarch64-linux-android"]
 
 # Path to your application's resources folder.
 # If not specified, resources will not be included in the APK.

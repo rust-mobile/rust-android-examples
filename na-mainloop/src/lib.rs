@@ -1,5 +1,6 @@
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
 use log::info;
+use ndk::native_window::HardwareBufferFormat;
 
 #[no_mangle]
 fn android_main(app: AndroidApp) {
@@ -38,6 +39,16 @@ fn android_main(app: AndroidApp) {
                             }
                             MainEvent::InitWindow { .. } => {
                                 native_window = app.native_window();
+                                if let Some(nw) = &native_window {
+                                    // Set the backing buffer to a known format (without changing
+                                    // the size) so that we can safely draw to it in dummy_render().
+                                    nw.set_buffers_geometry(
+                                        0,
+                                        0,
+                                        Some(HardwareBufferFormat::R8G8B8A8_UNORM),
+                                    )
+                                    .unwrap()
+                                }
                                 redraw_pending = true;
                             }
                             MainEvent::TerminateWindow { .. } => {
@@ -69,7 +80,7 @@ fn android_main(app: AndroidApp) {
                         redraw_pending = false;
 
                         // Handle input
-                        app.input_events(|event| {
+                        app.input_events_iter().unwrap().next(|event| {
                             info!("Input Event: {event:?}");
                             InputStatus::Unhandled
                         });
@@ -91,16 +102,15 @@ fn android_main(app: AndroidApp) {
 /// responsive, otherwise it will stop delivering input
 /// events to us.
 fn dummy_render(native_window: &ndk::native_window::NativeWindow) {
-    unsafe {
-        let mut buf: ndk_sys::ANativeWindow_Buffer = std::mem::zeroed();
-        let mut rect: ndk_sys::ARect = std::mem::zeroed();
-        ndk_sys::ANativeWindow_lock(
-            native_window.ptr().as_ptr() as _,
-            &mut buf as _,
-            &mut rect as _,
-        );
-        // Note: we don't try and touch the buffer since that
-        // also requires us to handle various buffer formats
-        ndk_sys::ANativeWindow_unlockAndPost(native_window.ptr().as_ptr() as _);
+    let mut lock = native_window.lock(None).unwrap();
+    let (w, h) = (lock.width(), lock.height());
+
+    for (y, line) in lock.lines().unwrap().enumerate() {
+        let r = y * 255 / h;
+        for (x, pixels) in line.chunks_mut(4).enumerate() {
+            let g = x * 255 / w;
+            pixels[0].write(r as u8);
+            pixels[1].write(g as u8);
+        }
     }
 }
