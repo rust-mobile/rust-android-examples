@@ -1132,7 +1132,9 @@ impl App {
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(android_app: AndroidApp) {
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
+    android_logger::init_once(
+        android_logger::Config::default().with_max_level(log::LevelFilter::Trace),
+    );
 
     let mut app = App::new().unwrap();
 
