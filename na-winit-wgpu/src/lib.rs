@@ -345,7 +345,8 @@ async fn _main(event_loop: EventLoop<()>) {
     #[allow(unused_mut)]
     let mut app = App::new(instance);
 
-    #[cfg(not(target_os = "android"))]
+    // spawn_local causes ownership troubles in the event loop closure, so just init here
+    #[cfg(target_arch = "wasm32")]
     app.resume(&event_loop).await;
 
     run(event_loop, app)
