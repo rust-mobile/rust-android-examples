@@ -35,9 +35,6 @@ cargo apk run
 https://github.com/rust-mobile/xbuild
 
 ```
-export ANDROID_NDK_HOME="path/to/ndk"
-export ANDROID_SDK_HOME="path/to/sdk"
-
 rustup target add aarch64-linux-android
 cargo install xbuild
 
