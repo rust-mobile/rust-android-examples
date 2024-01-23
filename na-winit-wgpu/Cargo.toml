@@ -7,15 +7,36 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.28", features = ["android-native-activity"] }
-wgpu = "0.16"
-pollster = "0.2"
+winit = { version = "0.29", features = ["android-native-activity"] }
+wgpu = "0.19"
+pollster = "0.3"
+cfg-if = "1.0"
+
+#[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1.0"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+  "Gpu",
+  "Document",
+  "Window",
+  "HtmlElement",
+  "HtmlCanvasElement",
+  "Node",
+  "Element",
+  "WebGlBuffer",
+  "WebGlVertexArrayObject",
+  "WebGl2RenderingContext",
+  "WebGlProgram",
+  "WebGlShader",
+] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.11.0"
+android_logger = "0.13"
 
 [patch.crates-io]
 
@@ -35,7 +56,6 @@ android_logger = "0.11.0"
 # out a release branch locally to be compatible)
 # android-activity = { path = "../../android-activity/android-activity" }
 
-
 [features]
 default = []
 desktop = []
@@ -48,3 +68,23 @@ crate_type=["cdylib"]
 path="src/lib.rs"
 name="test-winit-wgpu"
 required-features = [ "desktop" ]
+
+[package.metadata.android]
+package = "com.examples.na_winit_main"
+build_targets = [ "aarch64-linux-android" ] #, "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android" ]
+
+[package.metadata.android.sdk]
+min_sdk_version = 21
+target_sdk_version = 34
+max_sdk_version = 34
+
+[package.metadata.android.signing.release]
+path = "/home/frank/.android/debug.keystore"
+keystore_password = "android"
+
+#[[package.metadata.android.uses_feature]]
+#name = "android.hardware.vulkan.level"
+#required = true
+#version = 1
+
+# For more Android options, see https://docs.rs/crate/cargo-apk/latest
