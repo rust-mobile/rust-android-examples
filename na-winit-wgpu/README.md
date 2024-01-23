@@ -4,6 +4,8 @@ instead of `GameActivity`
 Note: you may need to use compile time variable WGPU_BACKEND=GL for older devices until autodetection is fixed:
 https://github.com/gfx-rs/wgpu/issues/2384
 
+Note: the onscreen keyboard will not work on a window surface; you'd probably need to construct a SurfaceView as done in GameActivity. Better to just use GameActivity.
+
 # Gradle Build
 
 ```bash
