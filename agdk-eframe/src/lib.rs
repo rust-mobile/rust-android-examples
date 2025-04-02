@@ -20,23 +20,19 @@ fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     eframe::run_native(
         "My egui App",
         options,
-        Box::new(|_cc| Box::<DemoApp>::default()),
+        Box::new(|_cc| Ok(Box::<DemoApp>::default())),
     )
 }
 
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    use winit::platform::android::EventLoopBuilderExtAndroid;
-
     android_logger::init_once(
-        android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
+        android_logger::Config::default().with_max_level(log::LevelFilter::Trace),
     );
 
     let options = NativeOptions {
-        event_loop_builder: Some(Box::new(move |builder| {
-            builder.with_android_app(app);
-        })),
+        android_app: Some(app.clone()),
         ..Default::default()
     };
 
