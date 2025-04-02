@@ -1,14 +1,17 @@
 use std::borrow::Cow;
+use std::sync::Arc;
 
 use log::trace;
 
-use wgpu::TextureFormat;
-use wgpu::{Adapter, Device, Instance, PipelineLayout, Queue, RenderPipeline, ShaderModule};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
 
-use winit::platform::run_return::EventLoopExtRunReturn;
+use wgpu::{Adapter, Device, Instance, PipelineLayout, Queue, RenderPipeline, ShaderModule};
+use wgpu::{PipelineCompilationOptions, TextureFormat};
+
+use winit::error::EventLoopError;
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopBuilder},
 };
 
 #[cfg(target_os = "android")]
@@ -24,8 +27,8 @@ struct RenderState {
 }
 
 struct SurfaceState {
-    window: winit::window::Window,
-    surface: wgpu::Surface,
+    window: Arc<winit::window::Window>,
+    surface: wgpu::Surface<'static>,
 }
 
 struct App {
@@ -47,36 +50,40 @@ impl App {
 }
 
 impl App {
-    fn create_surface<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
-        let window = winit::window::Window::new(event_loop).unwrap();
+    fn create_surface(&mut self, event_loop: &ActiveEventLoop) {
+        let window_attributes = winit::window::WindowAttributes::default();
+        let window = event_loop.create_window(window_attributes).unwrap();
+        let window = Arc::new(window);
         log::info!("WGPU: creating surface for native window");
 
         // # Panics
         // Currently create_surface is documented to only possibly fail with with WebGL2
-        let surface = unsafe {
-            self.instance
-                .create_surface(&window)
-                .expect("Failed to create surface")
-        };
-        self.surface_state = Some(SurfaceState { window, surface });
+        let surface = self
+            .instance
+            .create_surface(Arc::clone(&window))
+            .expect("Failed to create surface");
+        self.surface_state = Some(SurfaceState {
+            window: window,
+            surface,
+        });
     }
 
     async fn init_render_state(adapter: &Adapter, target_format: TextureFormat) -> RenderState {
-        log::info!("Initializing render state");
+        log::info!("Initializing render state for target format: {target_format:?}");
 
         log::info!("WGPU: requesting device");
         // Create the logical device and command queue
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: None,
-                    features: wgpu::Features::empty(),
-                    // Make sure we use the texture resolution limits from the adapter, so we can support images the size of the swapchain.
-                    limits: wgpu::Limits::downlevel_webgl2_defaults()
-                        .using_resolution(adapter.limits()),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: None,
+                experimental_features: wgpu::ExperimentalFeatures::default(),
+                required_features: wgpu::Features::empty(),
+                // Make sure we use the texture resolution limits from the adapter, so we can support images the size of the swapchain.
+                required_limits: wgpu::Limits::downlevel_webgl2_defaults()
+                    .using_resolution(adapter.limits()),
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::Off,
+            })
             .await
             .expect("Failed to create device");
 
@@ -91,7 +98,7 @@ impl App {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         log::info!("WGPU: creating render pipeline");
@@ -100,18 +107,21 @@ impl App {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main",
+                entry_point: Some("vs_main"),
+                compilation_options: PipelineCompilationOptions::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
+                compilation_options: PipelineCompilationOptions::default(),
                 targets: &[Some(target_format.into())],
             }),
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         });
 
         RenderState {
@@ -152,6 +162,9 @@ impl App {
             if self.render_state.is_none() {
                 log::info!("WGPU: finding supported swapchain format");
                 let surface_caps = surface_state.surface.get_capabilities(adapter);
+                for format in surface_caps.formats.iter() {
+                    log::info!("WGPU:   supported format: {format:?}");
+                }
                 let swapchain_format = surface_caps.formats[0];
                 let rs = Self::init_render_state(adapter, swapchain_format).await;
                 self.render_state = Some(rs);
@@ -160,21 +173,16 @@ impl App {
     }
 
     fn configure_surface_swapchain(&mut self) {
-        if let (Some(render_state), Some(surface_state)) = (&self.render_state, &self.surface_state)
+        if let (Some(adapter), Some(render_state), Some(surface_state)) =
+            (&self.adapter, &self.render_state, &self.surface_state)
         {
             let swapchain_format = render_state.target_format;
             let size = surface_state.window.inner_size();
 
-            let config = wgpu::SurfaceConfiguration {
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                format: swapchain_format,
-                width: size.width,
-                height: size.height,
-                present_mode: wgpu::PresentMode::Mailbox,
-                //present_mode: wgpu::PresentMode::Fifo,
-                alpha_mode: wgpu::CompositeAlphaMode::Inherit,
-                view_formats: vec![swapchain_format],
-            };
+            let config = surface_state
+                .surface
+                .get_default_config(adapter, u32::max(size.width, 1), u32::max(size.height, 1))
+                .expect("Window surface can't be rendered to by adapter");
 
             log::info!("WGPU: Configuring surface swapchain: format = {swapchain_format:?}, size = {size:?}");
             surface_state
@@ -190,7 +198,7 @@ impl App {
         }
     }
 
-    fn resume<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
+    fn resume(&mut self, event_loop: &ActiveEventLoop) {
         log::info!("Resumed, creating render state...");
         self.create_surface(event_loop);
         pollster::block_on(self.ensure_render_state_for_surface());
@@ -199,14 +207,14 @@ impl App {
     }
 }
 
-fn run(mut event_loop: EventLoop<()>) {
+fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
     log::info!("Running mainloop...");
 
     // doesn't need to be re-considered later
-    let instance = Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
+    let instance = Instance::new(&wgpu::InstanceDescriptor {
+        //backends: wgpu::Backends::all(),
         //backends: wgpu::Backends::VULKAN,
-        //backends: wgpu::Backends::GL,
+        backends: wgpu::Backends::GL,
         ..Default::default()
     });
 
@@ -215,17 +223,20 @@ fn run(mut event_loop: EventLoop<()>) {
     // It's not recommended to use `run` on Android because it will call
     // `std::process::exit` when finished which will short-circuit any
     // Java lifecycle handling
-    event_loop.run_return(move |event, event_loop, control_flow| {
+    #[allow(deprecated)]
+    event_loop.run(move |event, event_loop| {
         log::info!("Received Winit event: {event:?}");
 
-        *control_flow = ControlFlow::Wait;
+        event_loop.set_control_flow(ControlFlow::Wait);
         match event {
             Event::Resumed => {
                 app.resume(event_loop);
             }
             Event::Suspended => {
                 log::info!("Suspended, dropping render state...");
-                app.render_state = None;
+                app.surface_state = None;
+                // XXX: only re-create render state if the surface format changes
+                //app.render_state = None;
             }
             Event::WindowEvent {
                 event: WindowEvent::Resized(_size),
@@ -236,7 +247,10 @@ fn run(mut event_loop: EventLoop<()>) {
                 // for a resize which may be required on some platforms...
                 app.queue_redraw();
             }
-            Event::RedrawRequested(_) => {
+            Event::WindowEvent {
+                event: WindowEvent::RedrawRequested,
+                ..
+            } => {
                 log::info!("Handling Redraw Request");
 
                 if let Some(ref surface_state) = app.surface_state {
@@ -262,10 +276,14 @@ fn run(mut event_loop: EventLoop<()>) {
                                         resolve_target: None,
                                         ops: wgpu::Operations {
                                             load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
-                                            store: true,
+                                            store: wgpu::StoreOp::Store,
                                         },
+                                        depth_slice: None,
                                     })],
                                     depth_stencil_attachment: None,
+                                    timestamp_writes: None,
+                                    occlusion_query_set: None,
+                                    multiview_mask: None,
                                 });
                             rpass.set_pipeline(&rs.render_pipeline);
                             rpass.draw(0..3, 0..1);
@@ -273,24 +291,27 @@ fn run(mut event_loop: EventLoop<()>) {
 
                         rs.queue.submit(Some(encoder.finish()));
                         frame.present();
-                        surface_state.window.request_redraw();
+                        //surface_state.window.request_redraw();
                     }
                 }
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
-            } => *control_flow = ControlFlow::Exit,
+            } => event_loop.exit(),
             Event::WindowEvent { event: _, .. } => {
                 log::info!("Window event {:#?}", event);
+                if let Some(ref surface_state) = app.surface_state {
+                    surface_state.window.request_redraw();
+                }
             }
             _ => {}
         }
-    });
+    })
 }
 
-fn _main(event_loop: EventLoop<()>) {
-    run(event_loop);
+fn _main(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
+    run(event_loop)
 }
 
 #[allow(dead_code)]
@@ -301,18 +322,24 @@ fn android_main(app: AndroidApp) {
 
     android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
 
-    let event_loop = EventLoopBuilder::new().with_android_app(app).build();
-    _main(event_loop);
+    std::env::set_var("RUST_BACKTRACE", "full");
+
+    let event_loop = EventLoop::builder().with_android_app(app).build().unwrap();
+    if let Err(err) = _main(event_loop) {
+        eprintln!("Error while running event loop: {err:?}");
+    }
 }
 
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-fn main() {
+fn main() -> Result<(), EventLoopError> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info) // Default Log Level
         .parse_default_env()
         .init();
 
-    let event_loop = EventLoopBuilder::new().build();
-    _main(event_loop);
+    let event_loop = EventLoop::builder()
+        .build()
+        .expect("Failed to create event loop");
+    _main(event_loop)
 }
