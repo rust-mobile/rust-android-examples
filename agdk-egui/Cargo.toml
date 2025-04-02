@@ -10,10 +10,11 @@ resolver = "2"
 log = "0.4"
 pollster = "0.2"
 
-egui = { version = "0.22", features = [ "log" ] }
-egui-wgpu = { version = "0.22", features = [ "winit" ] }
-egui-winit = { version = "0.22", default-features = false, features = [ "android-game-activity" ] }
-egui_demo_lib = "0.22"
+egui = { version = "0.31", features = [ "log" ] }
+egui-wgpu = { version = "0.31", features = [ "winit" ] }
+egui-winit = { version = "0.31", default-features = false, features = [ "android-game-activity" ] }
+egui_demo_lib = "0.31"
+winit = { version = "0.30.9" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
@@ -27,14 +28,15 @@ desktop = []
 
 [lib]
 name="main"
-crate_type=["cdylib"]
+crate-type=["cdylib"]
 
 [[bin]]
 path="src/lib.rs"
 name="egui-test"
 required-features = [ "desktop" ]
 
-#[patch.crates-io]
+[patch.crates-io]
 #egui = { version = "0.22", path = "../../egui/crates/egui" }
 #egui-wgpu = { version = "0.22", path = "../../egui/crates/egui-wgpu" }
 #egui-winit = { version = "0.22", path = "../../egui/crates/egui-winit" }
+android-activity = { path = "../../android-activity/android-activity" }
