@@ -8,10 +8,11 @@ edition = "2021"
 [dependencies]
 log = "0.4"
 android_logger = "0.11.0"
-android-activity = { version = "0.4", features = ["game-activity"] }
-ndk-sys = "0.4"
-ndk = "0.7"
+android-activity = { version = "0.6", features = ["game-activity"] }
 
 [lib]
 name="main"
-crate_type=["cdylib"]
+crate-type=["cdylib"]
+
+[patch.crates-io]
+android-activity = { path = "../../android-activity/android-activity"}

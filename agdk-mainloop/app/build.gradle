@@ -4,16 +4,14 @@ plugins {
 
 android {
     ndkVersion "25.2.9519653"
-    compileSdk 31
+    compileSdk 35
 
     defaultConfig {
-        applicationId "co.realfit.agdkmainloop"
-        minSdk 28
-        targetSdk 31
+        applicationId "com.github.rust_mobile.agdkmainloop"
+        minSdk 31
+        targetSdk 35
         versionCode 1
         versionName "1.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -30,34 +28,21 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_10
+        targetCompatibility JavaVersion.VERSION_1_10
     }
-    namespace 'co.realfit.agdkmainloop'
+    namespace 'com.github.rust_mobile.agdkmainloop'
 }
 
 dependencies {
+    // Workaround to ensure consistent resolution of transitive kotlin-stdlib deps:
+    // https://youtrack.jetbrains.com/issue/KT-55297/kotlin-stdlib-should-declare-constraints-on-kotlin-stdlib-jdk8-and-kotlin-stdlib-jdk7#focus=Comments-27-6727134.0-0
+    implementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.0")
 
-    implementation 'androidx.appcompat:appcompat:1.4.1'
-    implementation 'com.google.android.material:material:1.5.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
-
-    // To use the Android Frame Pacing library
-    //implementation "androidx.games:games-frame-pacing:1.9.1"
-
-    // To use the Android Performance Tuner
-    //implementation "androidx.games:games-performance-tuner:1.5.0"
+    implementation 'androidx.appcompat:appcompat:1.7.0'
 
     // To use the Games Activity library
-    implementation "androidx.games:games-activity:1.1.0"
-
-    // To use the Games Controller Library
-    //implementation "androidx.games:games-controller:1.1.0"
-
-    // To use the Games Text Input Library
-    //implementation "androidx.games:games-text-input:1.1.0"
+    implementation "androidx.games:games-activity:4.0.0"
+    // Note: don't include game-text-input separately, since it's integrated into game-activity
 }
 
