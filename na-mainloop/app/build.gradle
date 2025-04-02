@@ -4,12 +4,12 @@ plugins {
 
 android {
     ndkVersion "25.2.9519653"
-    compileSdk 31
+    compileSdk 35
 
     defaultConfig {
-        applicationId "co.realfit.namainloop"
-        minSdk 28
-        targetSdk 31
+        applicationId "com.github.realfit_mobile.namainloop"
+        minSdk 31
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
@@ -30,10 +30,10 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_10
+        targetCompatibility JavaVersion.VERSION_1_10
     }
-    namespace 'co.realfit.namainloop'
+    namespace 'com.github.realfit_mobile.namainloop'
 }
 
 dependencies {
