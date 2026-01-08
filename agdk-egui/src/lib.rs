@@ -2,7 +2,7 @@ use std::{num::NonZeroU32, sync::Arc};
 use tracing::{debug, error};
 
 use egui::ViewportId;
-use egui_wgpu::{wgpu, RendererOptions};
+use egui_wgpu::RendererOptions;
 use egui_winit::winit;
 
 use winit::event_loop::{ActiveEventLoop, EventLoop};
@@ -87,10 +87,6 @@ fn _main(event_loop: EventLoop<Event>) {
     )));
     ctx.set_request_repaint_callback(move |_info| {
         debug!("Request Repaint Callback");
-
-        // XXX: debug (Egui will redraw continuously during text input which
-        // makes it awkward to debug IME behavior)
-        //return;
         repaint_signal
             .0
             .lock()
@@ -206,7 +202,6 @@ const DEFAULT_ENV_FILTER: &str = "debug,wgpu_hal=info,winit=info,naga=info";
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
@@ -215,7 +210,7 @@ fn android_main(app: AndroidApp) {
     let filter_layer = tracing_subscriber::EnvFilter::new(DEFAULT_ENV_FILTER);
     let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
         .with_ansi(false)
-        .with_span_events(FmtSpan::CLOSE)
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
         .with_thread_names(true);
     tracing_subscriber::registry()
         .with(filter_layer)

@@ -4,16 +4,14 @@ plugins {
 
 android {
     ndkVersion "25.2.9519653"
-    compileSdk 31
+    compileSdk 35
 
     defaultConfig {
-        applicationId "co.realfit.nasubclassjni"
-        minSdk 28
-        targetSdk 31
+        applicationId "com.github.rust_mobile.nasubclassjni"
+        minSdk 31
+        targetSdk 35
         versionCode 1
         versionName "1.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -30,10 +28,10 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_10
+        targetCompatibility JavaVersion.VERSION_1_10
     }
-    namespace 'co.realfit.nasubclassjni'
+    namespace 'com.github.rust_mobile.nasubclassjni'
 }
 
 dependencies {

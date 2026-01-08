@@ -5,6 +5,8 @@ use log::info;
 fn android_main(app: AndroidApp) {
     android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
 
+    std::env::set_var("RUST_BACKTRACE", "full");
+
     let mut quit = false;
     let mut redraw_pending = true;
     let mut native_window: Option<ndk::native_window::NativeWindow> = None;
@@ -18,7 +20,7 @@ fn android_main(app: AndroidApp) {
                         info!("Early wake up");
                     }
                     PollEvent::Timeout => {
-                        info!("Timed out");
+                        //info!("Timed out");
                         // Real app would probably rely on vblank sync via graphics API...
                         redraw_pending = true;
                     }
@@ -68,13 +70,21 @@ fn android_main(app: AndroidApp) {
                     if let Some(native_window) = &native_window {
                         redraw_pending = false;
 
-                        // Handle input
-                        app.input_events(|event| {
-                            info!("Input Event: {event:?}");
-                            InputStatus::Unhandled
-                        });
+                        // Handle input, via a lending iterator
+                        match app.input_events_iter() {
+                            Ok(mut iter) => loop {
+                                if !iter.next(|event| {
+                                    info!("Input Event: {event:?}");
+                                    InputStatus::Unhandled
+                                }) {
+                                    break;
+                                }
+                            },
+                            Err(err) => {
+                                log::error!("Failed to get input events iterator: {err:?}");
+                            }
+                        }
 
-                        info!("Render...");
                         dummy_render(native_window);
                     }
                 }
@@ -105,12 +115,19 @@ fn dummy_render(native_window: &ndk::native_window::NativeWindow) {
     }
 }
 
-#[allow(non_snake_case)]
-#[no_mangle]
-pub extern "C" fn Java_co_realfit_nasubclassjni_MainActivity_notifyOnNewIntent<'local>(
-    _env: jni::JNIEnv<'local>,
+#[jni::jni_mangle("com.github.rust_mobile.nasubclassjni.MainActivity")]
+pub fn notify_on_new_intent<'local>(
+    mut unowned_env: jni::EnvUnowned<'local>,
     _class: jni::objects::JClass<'local>,
+    message: jni::objects::JString<'local>,
     _activity: jni::objects::JObject<'local>,
 ) {
     info!("onNewIntent was called!");
+
+    unowned_env
+        .with_env(|_env| -> jni::errors::Result<()> {
+            info!("onNewIntent message: {message}");
+            Ok(())
+        })
+        .resolve::<jni::errors::ThrowRuntimeExAndDefault>()
 }
