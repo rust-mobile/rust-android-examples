@@ -6,13 +6,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4"
-android_logger = "0.11.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "env-filter",
+    "tracing-log",
+] }
+paranoid-android = "0.2"
+tracing-log = "0.2"
 android-activity = { version = "0.6", features = ["game-activity"] }
+jni = "0.22"
 
 [lib]
-name="main"
-crate-type=["cdylib"]
+name = "main"
+crate-type = ["cdylib"]
 
 [patch.crates-io]
-android-activity = { path = "../../android-activity/android-activity"}
+android-activity = { path = "../../android-activity/android-activity" }
+jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
+jni-macros = { path = "../../../../jni-rs/jni-git-dev0/crates/jni-macros" }

@@ -1,4 +1,4 @@
-package co.realfit.agdkcpal;
+package com.github.rust_mobile.agdkcpal;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
@@ -28,7 +28,7 @@ public class MainActivity extends GameActivity {
 
         // Load the native library.
         // The name "android-game" depends on your CMake configuration, must be
-        // consistent here and inside AndroidManifect.xml
+        // consistent here and inside AndroidManifest.xml
         System.loadLibrary("main");
     }
 

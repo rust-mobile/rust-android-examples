@@ -1,6 +1,7 @@
 ///! Based on https://github.com/RustAudio/cpal/blob/master/examples/android.rs
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
-use log::info;
+use std::sync::OnceLock;
+use tracing::{error, info};
 
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
@@ -27,7 +28,7 @@ fn make_audio_stream<T>(
 where
     T: SizedSample + FromSample<f32>,
 {
-    let sample_rate = config.sample_rate.0 as f32;
+    let sample_rate = config.sample_rate as f32;
     let channels = config.channels as usize;
 
     // Produce a sinusoid of maximum amplitude.
@@ -51,13 +52,29 @@ where
     Ok(stream)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        use tracing_subscriber::prelude::*;
+
+        unsafe { std::env::set_var("RUST_BACKTRACE", "full") };
+
+        const DEFAULT_ENV_FILTER: &str = "debug,wgpu_hal=info,winit=info,naga=info";
+        let filter_layer = tracing_subscriber::EnvFilter::new(DEFAULT_ENV_FILTER);
+        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
+            .with_ansi(false)
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+            .with_thread_names(true);
+        tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(android_layer)
+            .init();
+    });
 
     let mut quit = false;
     let mut redraw_pending = true;
-    let mut render_state: Option<()> = Default::default();
+    let mut native_window: Option<ndk::native_window::NativeWindow> = None;
 
     let host = cpal::default_host();
 
@@ -106,7 +123,7 @@ fn android_main(app: AndroidApp) {
                             }
                             MainEvent::Pause => {
                                 if let Err(err) = stream.pause() {
-                                    log::error!("Failed to pause audio playback: {err}");
+                                    error!("Failed to pause audio playback: {err}");
                                 }
                             }
                             MainEvent::Resume { loader, .. } => {
@@ -117,15 +134,16 @@ fn android_main(app: AndroidApp) {
                                 }
 
                                 if let Err(err) = stream.play() {
-                                    log::error!("Failed to start audio playback: {err}");
+                                    error!("Failed to start audio playback: {err}");
                                 }
                             }
                             MainEvent::InitWindow { .. } => {
-                                render_state = Some(());
+                                native_window = app.native_window();
                                 redraw_pending = true;
                             }
                             MainEvent::TerminateWindow { .. } => {
-                                render_state = None;
+                                native_window = None;
+                                redraw_pending = false;
                             }
                             MainEvent::WindowResized { .. } => {
                                 redraw_pending = true;
@@ -143,19 +161,48 @@ fn android_main(app: AndroidApp) {
                 }
 
                 if redraw_pending {
-                    if let Some(_rs) = render_state {
+                    if let Some(native_window) = &native_window {
                         redraw_pending = false;
 
-                        // Handle input
-                        app.input_events(|event| {
-                            info!("Input Event: {event:?}");
-                            InputStatus::Unhandled
-                        });
+                        // Handle input, via a lending iterator
+                        match app.input_events_iter() {
+                            Ok(mut iter) => loop {
+                                info!("Checking for next input event...");
+                                iter.next(|event| {
+                                    info!("Input Event: {event:?}");
+                                    InputStatus::Unhandled
+                                });
+                            },
+                            Err(err) => error!("Failed to get input events iterator: {err}"),
+                        }
 
                         info!("Render...");
+                        dummy_render(native_window);
                     }
                 }
             },
         );
+    }
+}
+
+/// Post a NOP frame to the window
+///
+/// Since this is a bare minimum test app we don't depend
+/// on any GPU graphics APIs but we do need to at least
+/// convince Android that we're drawing something and are
+/// responsive, otherwise it will stop delivering input
+/// events to us.
+fn dummy_render(native_window: &ndk::native_window::NativeWindow) {
+    unsafe {
+        let mut buf: ndk_sys::ANativeWindow_Buffer = std::mem::zeroed();
+        let mut rect: ndk_sys::ARect = std::mem::zeroed();
+        ndk_sys::ANativeWindow_lock(
+            native_window.ptr().as_ptr() as _,
+            &mut buf as _,
+            &mut rect as _,
+        );
+        // Note: we don't try and touch the buffer since that
+        // also requires us to handle various buffer formats
+        ndk_sys::ANativeWindow_unlockAndPost(native_window.ptr().as_ptr() as _);
     }
 }

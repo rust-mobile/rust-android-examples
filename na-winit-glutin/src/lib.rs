@@ -1,17 +1,14 @@
 use std::ffi::{CStr, CString};
 use std::num::NonZeroU32;
 
-use raw_window_handle::{
-    HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
-};
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
 
-use winit::event::{Event, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget};
+use winit::event::WindowEvent;
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
-use winit::platform::run_return::EventLoopExtRunReturn;
 #[cfg(glx_backend)]
-use winit::platform::unix;
+use winit::platform::x11;
 
 use glutin::config::{Config, ConfigSurfaceTypes, ConfigTemplate, ConfigTemplateBuilder};
 use glutin::context::{ContextApi, ContextAttributesBuilder, NotCurrentContext};
@@ -205,7 +202,7 @@ impl App {
         let preference = DisplayApiPreference::Egl;
 
         #[cfg(glx_backend)]
-        let preference = DisplayApiPreference::Glx(Box::new(unix::register_xlib_error_hook));
+        let preference = DisplayApiPreference::Glx(Box::new(x11::register_xlib_error_hook));
 
         #[cfg(cgl_backend)]
         let preference = DisplayApiPreference::Cgl;
@@ -217,17 +214,22 @@ impl App {
         let preference = DisplayApiPreference::WglThenEgl(Some(raw_window_handle));
 
         #[cfg(all(egl_backend, glx_backend))]
-        let preference = DisplayApiPreference::GlxThenEgl(Box::new(unix::register_xlib_error_hook));
+        let preference = DisplayApiPreference::GlxThenEgl(Box::new(x11::register_xlib_error_hook));
+
+        #[cfg(not(any(egl_backend, glx_backend, cgl_backend, wgl_backend)))]
+        compile_error!("At least one backend feature must be enabled: egl_backend, glx_backend, cgl_backend, wgl_backend");
 
         // Create connection to underlying OpenGL client Api.
-        unsafe { Display::new(raw_display, preference).unwrap() }
+        unsafe { Display::new(raw_display, preference).expect("Failed to create Display") }
     }
 
     fn ensure_glutin_display(&mut self, window: &winit::window::Window) {
         if self.glutin_display.is_none() {
-            let raw_window_handle = window.raw_window_handle();
-            self.glutin_display =
-                Some(Self::create_display(self.winsys_display, raw_window_handle));
+            let window_handle = window.window_handle().expect("Failed to get window handle");
+            self.glutin_display = Some(Self::create_display(
+                self.winsys_display,
+                window_handle.as_raw(),
+            ));
         }
     }
 
@@ -267,9 +269,10 @@ impl App {
         builder.build()
     }
 
-    fn ensure_surface_and_context<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
-        let window = winit::window::Window::new(&event_loop).unwrap();
-        let raw_window_handle = window.raw_window_handle();
+    fn ensure_surface_and_context(&mut self, event_loop: &ActiveEventLoop) {
+        let window_attributes = winit::window::WindowAttributes::default();
+        let window = event_loop.create_window(window_attributes).unwrap();
+        let raw_window_handle = window.window_handle().unwrap().as_raw();
 
         // Lazily initialize, egl, wgl, glx etc
         self.ensure_glutin_display(&window);
@@ -305,7 +308,7 @@ impl App {
         // XXX: Winit is missing a window.surface_size() API and the inner_size may be the wrong
         // size to use on some platforms!
         let (width, height): (u32, u32) = window.inner_size().into();
-        let raw_window_handle = window.raw_window_handle();
+        let raw_window_handle = window.window_handle().unwrap().as_raw();
         let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
             raw_window_handle,
             NonZeroU32::new(width).unwrap(),
@@ -360,7 +363,7 @@ impl App {
         }
     }
 
-    fn resume<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
+    fn resume(&mut self, event_loop: &ActiveEventLoop) {
         log::trace!("Resumed, creating render state...");
         self.ensure_surface_and_context(event_loop);
         self.ensure_renderer();
@@ -368,57 +371,59 @@ impl App {
     }
 }
 
-fn run(mut event_loop: EventLoop<()>) {
+fn run(event_loop: EventLoop<()>) {
     log::trace!("Running mainloop...");
 
-    let raw_display = event_loop.raw_display_handle();
+    let raw_display = event_loop.display_handle().unwrap().as_raw();
     let mut app = App::new(raw_display);
 
-    // It's not recommended to use `run` on Android because it will call
-    // `std::process::exit` when finished which will short-circuit any
-    // Java lifecycle handling
-    event_loop.run_return(move |event, event_loop, control_flow| {
-        log::trace!("Received Winit event: {event:?}");
+    #[allow(deprecated)]
+    event_loop
+        .run(move |event, event_loop| {
+            event_loop.set_control_flow(ControlFlow::Wait);
+            log::trace!("Received Winit event: {event:?}");
 
-        *control_flow = ControlFlow::Wait;
-        match event {
-            Event::Resumed => {
-                app.resume(event_loop);
-            }
-            Event::Suspended => {
-                log::trace!("Suspended, dropping surface state...");
-                app.surface_state = None;
-            }
-            Event::WindowEvent {
-                event: WindowEvent::Resized(_size),
-                ..
-            } => {
-                // Winit: doesn't currently implicitly request a redraw
-                // for a resize which may be required on some platforms...
-                app.queue_redraw();
-            }
-            Event::RedrawRequested(_) => {
-                log::trace!("Handling Redraw Request");
+            match event {
+                winit::event::Event::Resumed => {
+                    app.resume(event_loop);
+                }
+                winit::event::Event::Suspended => {
+                    log::trace!("Suspended, dropping surface state...");
+                    app.surface_state = None;
+                }
+                winit::event::Event::WindowEvent {
+                    event: WindowEvent::Resized(_size),
+                    ..
+                } => {
+                    // Winit: doesn't currently implicitly request a redraw
+                    // for a resize which may be required on some platforms...
+                    app.queue_redraw();
+                }
+                winit::event::Event::WindowEvent {
+                    event: WindowEvent::RedrawRequested,
+                    ..
+                } => {
+                    log::trace!("Handling Redraw Request");
 
-                if let Some(ref surface_state) = app.surface_state {
-                    if let Some(ctx) = &app.context {
-                        if let Some(ref renderer) = app.render_state {
-                            renderer.draw();
-                            if let Err(err) = surface_state.surface.swap_buffers(ctx) {
-                                log::error!("Failed to swap buffers after render: {}", err);
+                    if let Some(ref surface_state) = app.surface_state {
+                        if let Some(ctx) = &app.context {
+                            if let Some(ref renderer) = app.render_state {
+                                renderer.draw();
+                                if let Err(err) = surface_state.surface.swap_buffers(ctx) {
+                                    log::error!("Failed to swap buffers after render: {}", err);
+                                }
                             }
                         }
-                        app.queue_redraw();
                     }
                 }
+                winit::event::Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    ..
+                } => event_loop.exit(),
+                _ => {}
             }
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *control_flow = ControlFlow::Exit,
-            _ => {}
-        }
-    });
+        })
+        .expect("Failed to run event loop");
 }
 
 #[cfg(target_os = "android")]
@@ -428,7 +433,10 @@ fn android_main(app: AndroidApp) {
 
     android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
 
-    let event_loop = EventLoopBuilder::new().with_android_app(app).build();
+    let event_loop = EventLoop::with_user_event()
+        .with_android_app(app)
+        .build()
+        .expect("Failed to create event loop");
     run(event_loop);
 }
 
@@ -440,6 +448,8 @@ pub fn main() {
         .parse_default_env()
         .init();
 
-    let event_loop = EventLoopBuilder::new().build();
+    let event_loop = EventLoop::with_user_event()
+        .build()
+        .expect("Failed to create event loop");
     run(event_loop);
 }

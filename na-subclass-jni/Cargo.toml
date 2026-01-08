@@ -8,18 +8,18 @@ edition = "2021"
 [dependencies]
 log = "0.4"
 android_logger = "0.11.0"
-android-activity = { version = "0.4", features = [ "native-activity" ] }
-ndk-context = "0.1"
-ndk = "0.7"
-ndk-sys = "0.4"
-jni = "0.21"
+android-activity = { version = "0.6", features = [ "native-activity" ] }
+#ndk-context = "0.1"
+ndk = "0.9"
+ndk-sys = "0.6"
+jni = "0.22"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [lib]
 #name="na_subclass_jni"
-crate_type=["cdylib"]
+crate-type=["cdylib"]
 
 
 ####################
@@ -187,3 +187,8 @@ label = "Application Name"
 #path = "/rust-windowing/android-ndk-rs/tree/master/cargo-apk"
 #path_prefix = "/rust-windowing/"
 #mime_type = "image/jpeg"
+
+[patch.crates-io]
+jni = { git = "https://github.com/jni-rs/jni-rs.git", branch = "release-0.22" }
+android-activity = { git = "https://github.com/rust-mobile/android-activity.git", branch = "rib/stack/jni-0.22" }
+#android-activity = { path = "../../../android-activity/jni-next/android-activity" }

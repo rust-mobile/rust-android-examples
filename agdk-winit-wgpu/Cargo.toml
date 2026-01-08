@@ -33,7 +33,7 @@ android_logger = "0.13.1"
 # Note: also check that the local android-activity/Cargo.toml version matches
 # the version of android-activity that Winit depends on (in case you need to check
 # out a release branch locally to be compatible)
-#android-activity = { path = "../../android-activity" }
+android-activity = { path = "../../android-activity/android-activity" }
 
 [features]
 default = []

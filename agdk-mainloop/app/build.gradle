@@ -3,20 +3,19 @@ plugins {
 }
 
 android {
-    ndkVersion "25.2.9519653"
-    compileSdk 35
+    compileSdk = 35
 
     defaultConfig {
-        applicationId "com.github.rust_mobile.agdkmainloop"
-        minSdk 31
-        targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.github.rust_mobile.agdkmainloop"
+        minSdk = 31
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
@@ -31,18 +30,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_10
         targetCompatibility JavaVersion.VERSION_1_10
     }
-    namespace 'com.github.rust_mobile.agdkmainloop'
+    namespace = 'com.github.rust_mobile.agdkmainloop'
 }
 
 dependencies {
-    // Workaround to ensure consistent resolution of transitive kotlin-stdlib deps:
-    // https://youtrack.jetbrains.com/issue/KT-55297/kotlin-stdlib-should-declare-constraints-on-kotlin-stdlib-jdk8-and-kotlin-stdlib-jdk7#focus=Comments-27-6727134.0-0
-    implementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.0")
-
     implementation 'androidx.appcompat:appcompat:1.7.0'
 
     // To use the Games Activity library
-    implementation "androidx.games:games-activity:4.0.0"
+    implementation "androidx.games:games-activity:4.4.0"
     // Note: don't include game-text-input separately, since it's integrated into game-activity
 }
 

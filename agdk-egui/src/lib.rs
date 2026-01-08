@@ -1,7 +1,10 @@
+#[cfg(target_os = "android")]
+use std::sync::OnceLock;
 use std::{num::NonZeroU32, sync::Arc};
+use tracing::{debug, error};
 
 use egui::ViewportId;
-use egui_wgpu::wgpu;
+use egui_wgpu::RendererOptions;
 use egui_winit::winit;
 
 use winit::event_loop::{ActiveEventLoop, EventLoop};
@@ -13,12 +16,12 @@ use winit::event_loop::ControlFlow;
 
 use egui_wgpu::winit::Painter;
 use egui_winit::State;
-//use egui_winit_platform::{Platform, PlatformDescriptor};
 use winit::event::Event::*;
 const INITIAL_WIDTH: u32 = 1920;
 const INITIAL_HEIGHT: u32 = 1080;
 
 /// A custom event type for the winit app.
+#[derive(Debug)]
 enum Event {
     RequestRedraw,
 }
@@ -52,7 +55,7 @@ fn create_window(
     if let Err(err) =
         pollster::block_on(painter.set_window(egui::ViewportId::ROOT, Some(window.clone())))
     {
-        log::error!("Failed to associate new Window with Painter: {err:?}");
+        error!("Failed to associate new Window with Painter: {err:?}");
         return None;
     }
 
@@ -84,7 +87,7 @@ fn _main(event_loop: EventLoop<Event>) {
         event_loop.create_proxy(),
     )));
     ctx.set_request_repaint_callback(move |_info| {
-        log::debug!("Request Repaint Callback");
+        debug!("Request Repaint Callback");
         repaint_signal
             .0
             .lock()
@@ -96,10 +99,8 @@ fn _main(event_loop: EventLoop<Event>) {
     let mut painter = pollster::block_on(Painter::new(
         ctx.clone(),
         egui_wgpu::WgpuConfiguration::default(),
-        1, // msaa samples
-        Some(wgpu::TextureFormat::Depth24Plus),
         false, // don't require transparent backbuffer
-        false, // no dithering
+        RendererOptions::default(),
     ));
     let mut window: Option<Window> = None;
     let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
@@ -109,7 +110,8 @@ fn _main(event_loop: EventLoop<Event>) {
         .run(move |event, event_loop| {
             event_loop.set_control_flow(ControlFlow::Wait);
 
-            log::debug!("handling winit event");
+            debug!("handling winit event: {event:?}");
+
             match (&mut window, event) {
                 (None, Resumed) => {
                     window = create_window(event_loop, ctx.clone(), &mut painter);
@@ -119,7 +121,7 @@ fn _main(event_loop: EventLoop<Event>) {
                         painter.set_window(ViewportId::ROOT, Some(window.window.clone())),
                     )
                     .unwrap_or_else(|err| {
-                        log::error!(
+                        error!(
                             "Failed to associate window with painter after resume event: {err:?}"
                         )
                     });
@@ -127,10 +129,18 @@ fn _main(event_loop: EventLoop<Event>) {
                 }
                 (_, Suspended) => {
                     window = None;
+                    pollster::block_on(
+                        painter.set_window(ViewportId::ROOT, None),
+                    )
+                    .unwrap_or_else(|err| {
+                        error!(
+                            "Failed to disassociate window from painter after Suspended event: {err:?}"
+                        )
+                    });
                 }
                 (_, UserEvent(Event::RequestRedraw)) => {
                     if let Some(window) = window.as_ref() {
-                        log::debug!("Winit request redraw, user event");
+                        debug!("Winit request redraw, user event");
                         window.window.request_redraw();
                     }
                 }
@@ -140,7 +150,7 @@ fn _main(event_loop: EventLoop<Event>) {
                         window_id, event, ..
                     },
                 ) if window.window.id() == window_id => {
-                    log::debug!("Window Event: {event:?}");
+                    debug!("Window Event: {event:?}");
 
                     let response = window.state.on_window_event(&window.window, &event);
                     // egui_winit probably shouldn't be returning repaint=true for RedrawRequested
@@ -194,23 +204,38 @@ fn _main(event_loop: EventLoop<Event>) {
         .unwrap();
 }
 
+const DEFAULT_ENV_FILTER: &str = "debug,wgpu_hal=info,winit=info,naga=info";
+
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
-    android_logger::init_once(
-        android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Trace) // Default comes from `log::max_level`, i.e. Off
-            .with_filter(
-                android_logger::FilterBuilder::new()
-                    .filter_level(log::LevelFilter::Debug)
-                    .filter_module("android_activity", log::LevelFilter::Trace)
-                    //.filter_module("winit", log::LevelFilter::Trace)
-                    .build(),
-            ),
-    );
+    std::env::set_var("RUST_BACKTRACE", "full");
+    std::env::set_var("WGPU_BACKEND", "vulkan");
+
+    // NB: android_main can be called multiple times if the application Activity
+    // is destroyed and recreated so we use a OnceLock to ensure that we only
+    // initialize our global state once (otherwise tracing_subscriber will panic
+    // if we try to initialize it multiple times).
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        use tracing_subscriber::prelude::*;
+
+        let filter_layer = tracing_subscriber::EnvFilter::new(DEFAULT_ENV_FILTER);
+        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
+            .with_ansi(false)
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+            .with_thread_names(true);
+        tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(android_layer)
+            .init();
+    });
+
+    eprintln!("Egui demo started");
+    tracing::info!("Egui demo started");
 
     let event_loop = EventLoop::with_user_event()
         .with_android_app(app)
@@ -222,10 +247,10 @@ fn android_main(app: AndroidApp) {
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn main() {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Warn) // Default Log Level
-        .parse_default_env()
-        .init();
+    if !std::option_env!("RUST_LOG").is_some() {
+        std::env::set_var("RUST_LOG", DEFAULT_ENV_FILTER);
+    }
+    tracing_subscriber::fmt::init();
 
     let event_loop = EventLoop::with_user_event().build().unwrap();
     _main(event_loop);

@@ -16,5 +16,15 @@ cargo install cargo-ndk
 cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
 ./gradlew build
 ./gradlew installDebug
-adb shell am start -n co.realfit.nasubclassjni/.MainActivity
+adb shell am start -n com.github.rust_mobile.nasubclassjni/.MainActivity
 ```
+
+Since this example configured the MainActivity with
+`android:launchMode="singleTop"` in the `AndroidManifest.xml`, you can test the
+`onNewIntent` override by re-running:
+
+```
+adb shell am start -n com.github.rust_mobile.nasubclassjni/.MainActivity
+```
+
+You should see the log message from Rust indicating that `onNewIntent` was called.

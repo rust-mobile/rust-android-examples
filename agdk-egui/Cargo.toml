@@ -7,36 +7,37 @@ resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "env-filter",
+    "tracing-log",
+] }
 pollster = "0.2"
 
-egui = { version = "0.31", features = [ "log" ] }
-egui-wgpu = { version = "0.31", features = [ "winit" ] }
-egui-winit = { version = "0.31", default-features = false, features = [ "android-game-activity" ] }
-egui_demo_lib = "0.31"
-winit = { version = "0.30.9" }
-
-[target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.10"
+egui = { version = "0.33" }
+egui-wgpu = { version = "0.33", features = ["winit"] }
+egui-winit = { version = "0.33", default-features = false, features = [
+    "wayland",
+    "android-game-activity",
+    "links",
+] }
+egui_demo_lib = "0.33"
+winit = { version = "0.30" }
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.13.0"
+paranoid-android = "0.2"
+tracing-log = "0.2"
 
 [features]
 default = []
 desktop = []
 
 [lib]
-name="main"
-crate-type=["cdylib"]
+name = "main"
+crate-type = ["cdylib"]
 
 [[bin]]
-path="src/lib.rs"
-name="egui-test"
-required-features = [ "desktop" ]
-
-[patch.crates-io]
-#egui = { version = "0.22", path = "../../egui/crates/egui" }
-#egui-wgpu = { version = "0.22", path = "../../egui/crates/egui-wgpu" }
-#egui-winit = { version = "0.22", path = "../../egui/crates/egui-winit" }
-android-activity = { path = "../../android-activity/android-activity" }
+path = "src/lib.rs"
+name = "egui-test"
+required-features = ["desktop"]

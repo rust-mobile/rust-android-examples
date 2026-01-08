@@ -9,8 +9,8 @@ export ANDROID_HOME="path/to/sdk"
 rustup target add aarch64-linux-android
 cargo install cargo-ndk
 
-cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
+cargo ndk -t arm64-v8a -P 31 -o app/src/main/jniLibs/  build
 ./gradlew build
 ./gradlew installDebug
-adb shell am start -n co.realfit.agdkcpal/.MainActivity
+adb shell am start -n com.github.rust_mobile.agdkcpal/.MainActivity
 ```
