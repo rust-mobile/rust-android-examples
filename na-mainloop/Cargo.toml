@@ -8,17 +8,18 @@ edition = "2021"
 [dependencies]
 log = "0.4"
 android_logger = "0.11.0"
-android-activity = { version = "0.6", features = [ "native-activity" ] }
+android-activity = { version = "0.6", features = ["native-activity"] }
 #android-activity = { path = "../../android-activity/android-activity", features = [ "native-activity" ] }
 #ndk-sys = "0.5"
 #ndk = "0.8"
 
 [lib]
 #name="na_mainloop"
-crate_type=["cdylib"]
+crate_type = ["cdylib"]
 
 [patch.crates-io]
 android-activity = { path = "../../android-activity/android-activity" }
+jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
 
 ####################
 # cargo apk config #
@@ -29,7 +30,7 @@ android-activity = { path = "../../android-activity/android-activity" }
 package = "com.github.rust_mobile.namainloop"
 
 # Specifies the array of targets to build for.
-build_targets = [ "aarch64-linux-android" ]
+build_targets = ["aarch64-linux-android"]
 
 # Path to your application's resources folder.
 # If not specified, resources will not be included in the APK.

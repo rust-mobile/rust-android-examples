@@ -30,6 +30,9 @@ fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Trace),
     );
+    std::env::set_var("RUST_BACKTRACE", "full");
+    eprintln!("agdk-eframe demo started");
+    log::debug!("agdk-eframe demo started");
 
     let options = NativeOptions {
         android_app: Some(app.clone()),
@@ -39,6 +42,7 @@ fn android_main(app: AndroidApp) {
     _main(options).unwrap_or_else(|err| {
         log::error!("Failure while running EFrame application: {err:?}");
     });
+    std::process::exit(0);
 }
 
 #[cfg(not(target_os = "android"))]

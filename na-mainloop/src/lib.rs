@@ -8,6 +8,10 @@ use log::info;
 fn android_main(app: AndroidApp) {
     android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
 
+    std::env::set_var("RUST_BACKTRACE", "full");
+    eprintln!("na-mainloop demo started");
+    log::info!("na-mainloop demo started");
+
     let mut quit = false;
     let mut redraw_pending = true;
     let mut native_window: Option<ndk::native_window::NativeWindow> = None;

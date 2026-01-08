@@ -11,6 +11,7 @@ winit = { version = "0.30", features = ["android-native-activity"] }
 wgpu = "28"
 pollster = "0.2"
 raw-window-handle = "0.6.0"
+bytemuck = "1.14"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"

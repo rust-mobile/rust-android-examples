@@ -12,10 +12,13 @@ pollster = "0.2"
 
 # For some reason logging within the egui crate isn't working, even with
 # the log feature. Maybe the android_logger crate is broken?
-egui = "0.22"
-egui-wgpu = { version = "0.22", features = [ "winit" ] }
-egui-winit = { version = "0.22", default-features = false, features = [ "android-native-activity" ] }
-egui_demo_lib = "0.22"
+egui = { version = "0.33", features = ["log"] }
+egui-wgpu = { version = "0.33", features = ["winit"] }
+egui-winit = { version = "0.33", default-features = false, features = [
+    "wayland",
+    #"android-native-activity",
+] }
+egui_demo_lib = "0.33"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
@@ -27,11 +30,18 @@ android_logger = "0.13.0"
 default = []
 desktop = []
 
-[lib]
-name="na_egui"
-crate_type=["cdylib"]
+#[lib]
+#name = "na_egui"
+#crate-type = ["cdylib"]
 
 [[bin]]
-path="src/lib.rs"
-name="egui-test"
-required-features = [ "desktop" ]
+path = "src/lib.rs"
+name = "egui-test"
+required-features = ["desktop"]
+
+[patch.crates-io]
+#egui = { version = "0.22", path = "../../egui/crates/egui" }
+#egui-wgpu = { version = "0.22", path = "../../egui/crates/egui-wgpu" }
+#egui-winit = { version = "0.22", path = "../../egui/crates/egui-winit" }
+android-activity = { path = "../../android-activity/android-activity" }
+jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }

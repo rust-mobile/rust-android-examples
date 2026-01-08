@@ -8,11 +8,11 @@ resolver = "2"
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.30", features = [ "android-game-activity" ] }
+winit = { version = "0.30", features = ["android-game-activity"] }
 #wgpu = "0.16.0"
 pollster = "0.2"
 egui = "0.31"
-eframe = { version = "0.31", features = [ "wgpu", "android-game-activity" ] }
+eframe = { version = "0.31", features = ["wgpu", "android-game-activity"] }
 egui_demo_lib = "0.31"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
@@ -26,13 +26,14 @@ default = []
 desktop = []
 
 [lib]
-name="main"
-crate_type=["cdylib"]
+name = "main"
+crate_type = ["cdylib"]
 
 [[bin]]
-path="src/lib.rs"
-name="agdk-eframe"
-required-features = [ "desktop" ]
+path = "src/lib.rs"
+name = "agdk-eframe"
+required-features = ["desktop"]
 
 [patch.crates-io]
 android-activity = { path = "../../android-activity/android-activity" }
+jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }

@@ -13,14 +13,19 @@ egl = ["glutin/egl"]
 glx = ["glutin/glx", "glutin/x11", "winit/x11", "x11"]
 wgl = ["glutin/wgl"]
 x11 = ["glutin/x11", "winit/x11"]
-wayland = ["glutin/wayland", "winit/wayland", "winit/wayland-dlopen", "winit/wayland-csd-adwaita-notitle"]
+wayland = [
+    "glutin/wayland",
+    "winit/wayland",
+    "winit/wayland-dlopen",
+    "winit/wayland-csd-adwaita-notitle",
+]
 
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.28", features = ["android-native-activity"] }
-glutin = "0.30"
-raw-window-handle = "0.5.0"
+winit = { version = "0.30", features = ["android-native-activity"] }
+glutin = "0.32"
+raw-window-handle = "0.6.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
@@ -30,7 +35,7 @@ android_logger = "0.11.0"
 
 [build-dependencies]
 gl_generator = "0.14"
-cfg_aliases = "0.1.1"
+cfg_aliases = "0.2"
 
 [patch.crates-io]
 
@@ -49,12 +54,16 @@ cfg_aliases = "0.1.1"
 # the version of android-activity that Winit depends on (in case you need to check
 # out a release branch locally to be compatible)
 #android-activity = { path = "../../android-activity" }
+android-activity = { path = "../../android-activity/android-activity" }
+jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
+winit = { path = "../../../../winit/winit-git-dev0" }
+glutin = { path = "../../../../glutin/glutin-git-dev0/glutin" }
 
 [lib]
 #name="main"
-crate_type=["cdylib"]
+crate-type = ["cdylib"]
 
 [[bin]]
-path="src/lib.rs"
-name="test-winit-glutin"
-required-features = [ "desktop" ]
+path = "src/lib.rs"
+name = "test-winit-glutin"
+required-features = ["desktop"]

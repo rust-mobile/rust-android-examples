@@ -16,3 +16,7 @@ anyhow = "1"
 [lib]
 name="main"
 crate_type=["cdylib"]
+
+# Uncomment to build against local android-activity
+[patches.crates-io]
+android-activity = { path = "../../android-activity/android-activity" }

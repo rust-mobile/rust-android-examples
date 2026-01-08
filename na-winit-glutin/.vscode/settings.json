@@ -1,0 +1,11 @@
+{
+    //"rust-analyzer.cargo.target": "aarch64-linux-android",
+    "rust-analyzer.cargo.features": [
+        "desktop",
+        "egl"
+    ],
+    "editor.formatOnSave": true,
+    "[xml]": {
+        "editor.formatOnSave": false
+    }
+}

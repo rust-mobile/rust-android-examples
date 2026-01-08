@@ -1,17 +1,20 @@
 use std::borrow::Cow;
+#[cfg(target_os = "android")]
+use std::ffi::c_void;
+#[cfg(target_os = "android")]
+use std::ptr::NonNull;
 use std::sync::Arc;
 
 use log::trace;
 
-use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
-
+use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
 use wgpu::{Adapter, Device, Instance, PipelineLayout, Queue, RenderPipeline, ShaderModule};
 use wgpu::{PipelineCompilationOptions, TextureFormat};
 
 use winit::error::EventLoopError;
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopBuilder},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
 };
 
 #[cfg(target_os = "android")]
@@ -24,6 +27,106 @@ struct RenderState {
     target_format: TextureFormat,
     _pipeline_layout: PipelineLayout,
     render_pipeline: RenderPipeline,
+    uniform_buffer: wgpu::Buffer,
+    uniform_bind_group: wgpu::BindGroup,
+}
+
+/// On Android it's not safe to rely on Winit's Window implementing
+/// HasWindowHandle because it doesn't (and can't) own the `ANativeWindow` that
+/// is used as a raw window handle. (If it acquired a reference then it would
+/// have to effectively leak that reference every time the app gets a new native
+/// window)
+///
+/// When an Android application suspends, the `ANativeWindow`s associated with
+/// surfaces may be released and so a raw window handle obtained via
+/// `winit::Window::window_handle()` may become an invalid pointer if nothing
+/// `_acquire()`d a reference to it.
+///
+/// To work around this, we create our own wrapper around the `ANativeWindow` so
+/// we can `_acquire()` an owning reference that we `_release()` when Dropped.
+struct OwnedWindowHandle {
+    #[cfg(not(target_os = "android"))]
+    window: Arc<winit::window::Window>,
+    #[cfg(target_os = "android")]
+    native_window: NonNull<c_void>, // ANativeWindow*
+}
+unsafe impl Send for OwnedWindowHandle {}
+unsafe impl Sync for OwnedWindowHandle {}
+impl OwnedWindowHandle {
+    fn new(window: Arc<winit::window::Window>) -> Result<Self, HandleError> {
+        #[cfg(not(target_os = "android"))]
+        {
+            Ok(Self { window })
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let raw_handle = window.window_handle()?.as_raw();
+            if let raw_window_handle::RawWindowHandle::AndroidNdk(handle) = raw_handle {
+                let native_window = handle.a_native_window;
+                extern "C" {
+                    fn ANativeWindow_acquire(window: *mut c_void);
+                }
+                // SAFETY: We assume the caller has ensured that `native_window` is a valid
+                // pointer to an `ANativeWindow` and that we own a reference to it.
+                unsafe {
+                    ANativeWindow_acquire(native_window.as_ptr());
+                }
+                Ok(Self { native_window })
+            } else {
+                panic!("Expected AndroidNdk window handle");
+            }
+        }
+    }
+}
+impl Drop for OwnedWindowHandle {
+    fn drop(&mut self) {
+        #[cfg(target_os = "android")]
+        {
+            extern "C" {
+                fn ANativeWindow_release(window: *mut c_void);
+            }
+            // SAFETY: We assume that `native_window` is a valid pointer to an
+            // `ANativeWindow` that we own a reference to.
+            unsafe {
+                ANativeWindow_release(self.native_window.as_ptr());
+            }
+        }
+    }
+}
+impl HasWindowHandle for OwnedWindowHandle {
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        #[cfg(not(target_os = "android"))]
+        {
+            self.window.window_handle()
+        }
+
+        #[cfg(target_os = "android")]
+        unsafe {
+            Ok(raw_window_handle::WindowHandle::borrow_raw(
+                raw_window_handle::AndroidNdkWindowHandle::new(self.native_window).into(),
+            ))
+        }
+    }
+}
+impl HasDisplayHandle for OwnedWindowHandle {
+    fn display_handle(
+        &self,
+    ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+        #[cfg(not(target_os = "android"))]
+        {
+            self.window.display_handle()
+        }
+
+        #[cfg(target_os = "android")]
+        unsafe {
+            Ok(raw_window_handle::DisplayHandle::borrow_raw(
+                raw_window_handle::AndroidDisplayHandle::new().into(),
+            ))
+        }
+    }
 }
 
 struct SurfaceState {
@@ -36,6 +139,11 @@ struct App {
     adapter: Option<Adapter>,
     surface_state: Option<SurfaceState>,
     render_state: Option<RenderState>,
+    rotation: f32,
+    position_x: f32,
+    position_y: f32,
+    last_drag_pos: Option<(f32, f32)>,
+    is_dragging: bool,
 }
 
 impl App {
@@ -45,6 +153,11 @@ impl App {
             adapter: None,
             surface_state: None,
             render_state: None,
+            rotation: 0.0,
+            position_x: 0.0,
+            position_y: 0.0,
+            last_drag_pos: None,
+            is_dragging: false,
         }
     }
 }
@@ -56,16 +169,15 @@ impl App {
         let window = Arc::new(window);
         log::info!("WGPU: creating surface for native window");
 
+        let window_handle =
+            OwnedWindowHandle::new(Arc::clone(&window)).expect("Failed to get owned window handle");
         // # Panics
         // Currently create_surface is documented to only possibly fail with with WebGL2
         let surface = self
             .instance
-            .create_surface(Arc::clone(&window))
+            .create_surface(window_handle)
             .expect("Failed to create surface");
-        self.surface_state = Some(SurfaceState {
-            window: window,
-            surface,
-        });
+        self.surface_state = Some(SurfaceState { window, surface });
     }
 
     async fn init_render_state(adapter: &Adapter, target_format: TextureFormat) -> RenderState {
@@ -94,10 +206,41 @@ impl App {
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
         });
 
+        log::info!("WGPU: creating uniform buffer");
+        let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Uniform Buffer"),
+            size: (std::mem::size_of::<f32>() * 4) as u64, // rotation, position_x, position_y, padding
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Bind Group Layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+
+        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Uniform Bind Group"),
+            layout: &bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            }],
+        });
+
         log::info!("WGPU: creating pipeline layout");
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&bind_group_layout],
             immediate_size: 0,
         });
 
@@ -131,6 +274,8 @@ impl App {
             target_format,
             _pipeline_layout: pipeline_layout,
             render_pipeline,
+            uniform_buffer,
+            uniform_bind_group,
         }
     }
 
@@ -205,6 +350,41 @@ impl App {
         self.configure_surface_swapchain();
         self.queue_redraw();
     }
+
+    fn start_drag(&mut self, x: f32, y: f32) {
+        self.is_dragging = true;
+        self.last_drag_pos = Some((x, y));
+        self.update_position(x, y);
+    }
+
+    fn update_drag(&mut self, x: f32, y: f32) {
+        if let Some((last_x, last_y)) = self.last_drag_pos {
+            let delta_x = x - last_x;
+            let delta_y = y - last_y;
+            let distance = (delta_x * delta_x + delta_y * delta_y).sqrt();
+            self.rotation += distance * 0.01;
+            self.last_drag_pos = Some((x, y));
+            self.update_position(x, y);
+            self.queue_redraw();
+        } else {
+            // First move after drag started without position
+            self.last_drag_pos = Some((x, y));
+            self.update_position(x, y);
+        }
+    }
+
+    fn end_drag(&mut self) {
+        self.is_dragging = false;
+        self.last_drag_pos = None;
+    }
+
+    fn update_position(&mut self, x: f32, y: f32) {
+        if let Some(ref surface_state) = self.surface_state {
+            let size = surface_state.window.inner_size();
+            self.position_x = (x / size.width as f32) * 2.0 - 1.0;
+            self.position_y = -((y / size.height as f32) * 2.0 - 1.0);
+        }
+    }
 }
 
 fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
@@ -212,9 +392,9 @@ fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
 
     // doesn't need to be re-considered later
     let instance = Instance::new(&wgpu::InstanceDescriptor {
-        //backends: wgpu::Backends::all(),
+        backends: wgpu::Backends::all(),
         //backends: wgpu::Backends::VULKAN,
-        backends: wgpu::Backends::GL,
+        //backends: wgpu::Backends::GL,
         ..Default::default()
     });
 
@@ -255,6 +435,18 @@ fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
 
                 if let Some(ref surface_state) = app.surface_state {
                     if let Some(ref rs) = app.render_state {
+                        // Update uniform buffer with rotation and position
+                        rs.queue.write_buffer(
+                            &rs.uniform_buffer,
+                            0,
+                            bytemuck::cast_slice(&[
+                                app.rotation,
+                                app.position_x,
+                                app.position_y,
+                                0.0,
+                            ]),
+                        );
+
                         let frame = surface_state
                             .surface
                             .get_current_texture()
@@ -275,7 +467,7 @@ fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
                                         view: &view,
                                         resolve_target: None,
                                         ops: wgpu::Operations {
-                                            load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+                                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
                                             store: wgpu::StoreOp::Store,
                                         },
                                         depth_slice: None,
@@ -286,6 +478,7 @@ fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
                                     multiview_mask: None,
                                 });
                             rpass.set_pipeline(&rs.render_pipeline);
+                            rpass.set_bind_group(0, &rs.uniform_bind_group, &[]);
                             rpass.draw(0..3, 0..1);
                         }
 
@@ -299,6 +492,53 @@ fn run(event_loop: EventLoop<()>) -> Result<(), EventLoopError> {
                 event: WindowEvent::CloseRequested,
                 ..
             } => event_loop.exit(),
+            Event::WindowEvent {
+                event: WindowEvent::Touch(touch),
+                ..
+            } => {
+                use winit::event::TouchPhase;
+                match touch.phase {
+                    TouchPhase::Started => {
+                        app.start_drag(touch.location.x as f32, touch.location.y as f32);
+                    }
+                    TouchPhase::Moved => {
+                        if app.is_dragging {
+                            app.update_drag(touch.location.x as f32, touch.location.y as f32);
+                        }
+                    }
+                    TouchPhase::Ended | TouchPhase::Cancelled => {
+                        app.end_drag();
+                    }
+                }
+            }
+            Event::WindowEvent {
+                event: WindowEvent::CursorMoved { position, .. },
+                ..
+            } => {
+                if app.is_dragging {
+                    println!("dragging, cursor moved to: {:?}", position);
+                    app.update_drag(position.x as f32, position.y as f32);
+                } else {
+                    println!("not dragging, cursor moved to: {:?}", position);
+                }
+            }
+            Event::WindowEvent {
+                event: WindowEvent::MouseInput { state, button, .. },
+                ..
+            } => {
+                use winit::event::{ElementState, MouseButton};
+                if button == MouseButton::Left {
+                    match state {
+                        ElementState::Pressed => {
+                            app.is_dragging = true;
+                            // Position will be set on first CursorMoved event
+                        }
+                        ElementState::Released => {
+                            app.end_drag();
+                        }
+                    }
+                }
+            }
             Event::WindowEvent { event: _, .. } => {
                 log::info!("Window event {:#?}", event);
                 if let Some(ref surface_state) = app.surface_state {
