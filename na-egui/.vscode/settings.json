@@ -1,7 +1,7 @@
 {
-    //"rust-analyzer.cargo.target": "aarch64-linux-android",
+    "rust-analyzer.cargo.target": "aarch64-linux-android",
     "rust-analyzer.cargo.features": [
-        "desktop"
+        //"desktop"
     ],
     "editor.formatOnSave": true,
     "[xml]": {

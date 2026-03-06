@@ -7,16 +7,22 @@ resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "env-filter",
+    "tracing-log",
+] }
 pollster = "0.2"
 
 # For some reason logging within the egui crate isn't working, even with
 # the log feature. Maybe the android_logger crate is broken?
-egui = { version = "0.33", features = ["log"] }
+egui = { version = "0.33" }
 egui-wgpu = { version = "0.33", features = ["winit"] }
 egui-winit = { version = "0.33", default-features = false, features = [
     "wayland",
-    #"android-native-activity",
+    "android-native-activity",
+    "links",
 ] }
 egui_demo_lib = "0.33"
 
@@ -24,15 +30,16 @@ egui_demo_lib = "0.33"
 env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.13.0"
+paranoid-android = "0.2"
+tracing-log = "0.2"
 
 [features]
 default = []
 desktop = []
 
-#[lib]
-#name = "na_egui"
-#crate-type = ["cdylib"]
+[lib]
+name = "na_egui"
+crate-type = ["cdylib"]
 
 [[bin]]
 path = "src/lib.rs"
@@ -44,4 +51,5 @@ required-features = ["desktop"]
 #egui-wgpu = { version = "0.22", path = "../../egui/crates/egui-wgpu" }
 #egui-winit = { version = "0.22", path = "../../egui/crates/egui-winit" }
 android-activity = { path = "../../android-activity/android-activity" }
-jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
+#jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
+webbrowser = { path = "/home/rib/src/webbrowser-rs/webbrowser-rs" }

@@ -29,8 +29,6 @@ winit = { version = "0.30.12" }
 env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
-#android_logger = "0.13.0"
-#tracing-android = "0.2.0"
 paranoid-android = "0.2"
 tracing-log = "0.2"
 
@@ -51,9 +49,11 @@ required-features = ["desktop"]
 #egui = { version = "0.22", path = "../../egui/crates/egui" }
 #egui-wgpu = { version = "0.22", path = "../../egui/crates/egui-wgpu" }
 #egui-winit = { version = "0.22", path = "../../egui/crates/egui-winit" }
-#android-activity = { path = "../../android-activity/android-activity" }
+android-activity = { path = "../../android-activity/android-activity" }
 #jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
 #winit = { path = "../../../../winit/winit-0.30.x" }
 
-android-activity = { git = "https://github.com/rust-mobile/android-activity", branch = "rib/stack/ime-support" }
+#android-activity = { git = "https://github.com/rust-mobile/android-activity", branch = "rib/stack/ime-support" }
+#android-activity = { git = "https://github.com/rust-mobile/android-activity", branch = "rib/stack/jni-0.22" }
 winit = { git = "https://github.com/rib/winit", branch = "rib/pr/android-ime-0.30" }
+#jni = { git = "https://github.com/jni-rs/jni-rs", branch = "release-0.22" }
