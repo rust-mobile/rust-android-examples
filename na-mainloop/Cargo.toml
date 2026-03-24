@@ -24,11 +24,6 @@ jni = "0.22"
 #name="na_mainloop"
 crate-type = ["cdylib"]
 
-[patch.crates-io]
-android-activity = { path = "../../android-activity/android-activity" }
-jni = { path = "../../../../jni-rs/jni-git-dev0/crates/jni" }
-jni-macros = { path = "../../../../jni-rs/jni-git-dev0/crates/jni-macros" }
-
 ####################
 # cargo apk config #
 ####################
