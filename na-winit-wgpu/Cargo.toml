@@ -22,15 +22,24 @@ bytemuck = "1.14"
 paranoid-android = "0.2"
 tracing-log = "0.2"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+tracing-web = "0.1"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3.92", features = [
+    "Window",
+    "Document",
+    "HtmlElement",
+    "Text",
+] }
+
 [features]
 default = []
-desktop = []
+_bin = []
+desktop = ["_bin"]
+web = ["_bin", "wgpu/webgl"]
 
 [lib]
 #name="main"
 crate-type = ["cdylib"]
-
-[[bin]]
-path = "src/lib.rs"
-name = "test-winit-wgpu"
-required-features = ["desktop"]

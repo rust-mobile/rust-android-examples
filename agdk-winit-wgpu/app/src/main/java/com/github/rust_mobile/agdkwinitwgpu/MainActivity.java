@@ -1,4 +1,4 @@
-package co.realfit.agdkwinitwgpu;
+package com.github.rust_mobile.agdkwinitwgpu;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;

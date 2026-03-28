@@ -1,10 +1,9 @@
 This is the same as agdk-winit-wgpu except it runs with `NativeActivity`
 instead of `GameActivity`
 
-# Gradle Build
+# Android Build
 
 ```bash
-export ANDROID_NDK_HOME="path/to/ndk"
 export ANDROID_HOME="path/to/sdk"
 
 rustup target add aarch64-linux-android
@@ -15,14 +14,15 @@ cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
 ./gradlew installDebug
 ```
 
-# Cargo APK Build
+# Desktop Build
 
 ```bash
-export ANDROID_NDK_HOME="path/to/ndk"
-export ANDROID_SDK_HOME="path/to/sdk"
+cargo run --features desktop
+```
 
-rustup target add aarch64-linux-android
-cargo install cargo-apk
+# WebGL Build
 
-cargo apk run
+```bash
+cargo install --locked trunk
+trunk serve --features web --open
 ```
