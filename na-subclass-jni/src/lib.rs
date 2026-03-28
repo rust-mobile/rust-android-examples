@@ -1,7 +1,7 @@
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
 use log::info;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
     android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
 

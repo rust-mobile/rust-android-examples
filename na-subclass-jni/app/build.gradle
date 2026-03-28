@@ -3,24 +3,23 @@ plugins {
 }
 
 android {
-    ndkVersion "25.2.9519653"
-    compileSdk 35
+    compileSdk = 35
 
     defaultConfig {
-        applicationId "com.github.rust_mobile.nasubclassjni"
-        minSdk 31
-        targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.github.rust_mobile.nasubclassjni"
+        minSdk = 31
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            minifyEnabled false
+            minifyEnabled = false
             //packagingOptions {
             //    doNotStrip '**/*.so'
             //}
@@ -28,14 +27,13 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_10
-        targetCompatibility JavaVersion.VERSION_1_10
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-    namespace 'com.github.rust_mobile.nasubclassjni'
+    namespace = 'com.github.rust_mobile.nasubclassjni'
 }
 
 dependencies {
-
 
 }
 
