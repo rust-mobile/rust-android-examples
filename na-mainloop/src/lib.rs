@@ -1,9 +1,8 @@
 use std::sync::OnceLock;
 
 use android_activity::{
-    AndroidApp, InputStatus, MainEvent, OnCreateState, PollEvent,
     input::{InputEvent, KeyAction, KeyEvent, KeyMapChar, MotionAction},
-    ndk, ndk_sys,
+    ndk, ndk_sys, AndroidApp, InputStatus, MainEvent, OnCreateState, PollEvent,
 };
 use jni::{
     objects::{JObject, JString},
