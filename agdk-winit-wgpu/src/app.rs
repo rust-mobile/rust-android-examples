@@ -792,7 +792,7 @@ impl App {
             Arc::clone(&self.inner),
         ));
         #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_futures::spawn_local(App::find_adapter_and_connect_device_for_surface(
+        wasm_bindgen_futures::spawn_local(App::ensure_adapter_and_connected_device_for_surface(
             Arc::clone(&self.inner),
         ));
     }
